@@ -1,0 +1,8 @@
+# Generated files
+packages/sdk/openapi.json
+packages/sdk/src/gen/
+
+# Build outputs
+packages/server/public/assets/
+packages/web/dist/
+node_modules/

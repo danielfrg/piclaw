@@ -1,0 +1,29 @@
+{
+  "name": "@codec/server",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "fmt": "prettier --write .",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "generate:openapi": "bun run scripts/generate.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@hono/standard-validator": "^0.2.2",
+    "@hono/zod-validator": "catalog:",
+    "@scalar/hono-api-reference": "^0.9.39",
+    "better-auth": "^1.4.18",
+    "drizzle-orm": "^0.45.1",
+    "hono": "catalog:",
+    "hono-openapi": "catalog:",
+    "pino": "catalog:",
+    "ulid": "catalog:",
+    "xdg-basedir": "^5.1.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "drizzle-kit": "^0.31.9"
+  }
+}
