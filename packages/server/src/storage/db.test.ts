@@ -4,19 +4,25 @@ import path from "path"
 import { sql } from "drizzle-orm"
 
 let tempDir: string
+const originalDbPath = process.env.CODEC_DB_PATH
 
 beforeEach(async () => {
   tempDir = await fs.mkdtemp(path.join(process.cwd(), ".tmp-db-"))
-  process.env.NODE_ENV = "production"
-  process.env.XDG_DATA_HOME = tempDir
-  process.env.XDG_CACHE_HOME = tempDir
-  process.env.XDG_CONFIG_HOME = tempDir
-  process.env.XDG_STATE_HOME = tempDir
+  process.env.CODEC_DB_PATH = path.join(tempDir, "app.db")
 })
 
 afterEach(async () => {
   await fs.rm(tempDir, { recursive: true, force: true })
+  restoreEnv("CODEC_DB_PATH", originalDbPath)
 })
+
+function restoreEnv(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key]
+    return
+  }
+  process.env[key] = value
+}
 
 describe("Database", () => {
   test("creates the database file", async () => {

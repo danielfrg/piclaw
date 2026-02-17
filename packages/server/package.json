@@ -18,6 +18,7 @@
     "drizzle-orm": "^0.45.1",
     "hono": "catalog:",
     "hono-openapi": "catalog:",
+    "jsonc-parser": "^3.3.1",
     "pino": "catalog:",
     "ulid": "catalog:",
     "xdg-basedir": "^5.1.0",

@@ -10,7 +10,7 @@ import * as schema from "@/storage/schema"
 const log = Log.create({ service: "db" })
 
 export namespace Database {
-  export const Path = path.join(Global.Path.data, "app.db")
+  export const Path = process.env.CODEC_DB_PATH || path.join(Global.Path.data, "app.db")
 
   type Schema = typeof schema
   type Client = BunSQLiteDatabase<Schema>

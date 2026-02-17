@@ -8,7 +8,7 @@ export namespace Global {
   const appName = "codec"
   const isDev = process.env.NODE_ENV !== "production"
 
-  const root = isDev ? path.join(process.cwd(), "data") : xdgData!
+  const root = isDev ? path.join(resolveRepoRoot(), "data") : xdgData!
 
   const data = isDev ? root : xdgData!
   const cache = isDev ? path.join(root, "cache") : path.join(xdgCache!, appName)
@@ -25,6 +25,15 @@ export namespace Global {
     config: config,
     state: state,
   }
+}
+
+function resolveRepoRoot() {
+  const cwd = process.cwd()
+  const parts = cwd.split(path.sep)
+  if (parts.slice(-2).join(path.sep) === path.join("packages", "server")) {
+    return path.resolve(cwd, "..", "..")
+  }
+  return cwd
 }
 
 await Promise.all([

@@ -31,7 +31,7 @@ export namespace Agent {
     return new PiAgent({
       initialState: {
         systemPrompt,
-        model: options.model,
+        model: options.model as any,
       },
     })
   }
