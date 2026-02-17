@@ -20,7 +20,7 @@ afterEach(async () => {
 
 describe("Database", () => {
   test("creates the database file", async () => {
-    const { Database } = await import("./db")
+    const { Database } = await import("@/storage/db")
     const dbPath = Database.Path
 
     const exists = await fs
@@ -32,7 +32,7 @@ describe("Database", () => {
   })
 
   test("runs a simple select(1)", async () => {
-    const { Database } = await import("./db")
+    const { Database } = await import("@/storage/db")
     const rows = Database.Client.all<{ value: number }>(sql.raw("select 1 as value"))
     expect(rows[0]?.value).toBe(1)
   })

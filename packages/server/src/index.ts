@@ -2,9 +2,17 @@ import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { serveStatic } from "hono/bun"
 
+import { SessionRoutes } from "@/routes/session"
+import { Log } from "@/util/log"
+
 const isProd = process.env.NODE_ENV === "production"
 
 export const app = new Hono()
+
+await Log.init({
+  level: process.env.LOG_LEVEL as Log.Level | undefined,
+  enabled: process.env.LOG_ENABLED !== "false",
+})
 
 app.use(
   "/*",
@@ -13,6 +21,8 @@ app.use(
     credentials: true,
   }),
 )
+
+app.route("/api/session", SessionRoutes())
 
 if (isProd) {
   // Prod: Serve static files

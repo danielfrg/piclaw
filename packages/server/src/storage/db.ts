@@ -3,9 +3,9 @@ import path from "path"
 
 import { Database as BunDatabase } from "bun:sqlite"
 
-import { Global } from "../global"
-import { Log } from "../util/log"
-import * as schema from "./schema"
+import { Global } from "@/global"
+import { Log } from "@/util/log"
+import * as schema from "@/storage/schema"
 
 const log = Log.create({ service: "db" })
 
