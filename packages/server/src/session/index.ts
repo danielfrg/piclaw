@@ -1,6 +1,5 @@
 import z from "zod"
-import { ulid } from "ulid"
-
+import { Id } from "@/util/id"
 import { Log } from "@/util/log"
 
 export namespace Session {
@@ -46,7 +45,7 @@ export namespace Session {
   export function create(input: z.infer<typeof CreateInput> = {}): Info {
     const time = now()
     const session: Info = {
-      id: ulid(),
+      id: Id.create("session"),
       title: input.title ?? "New Session",
       time: {
         created: time,

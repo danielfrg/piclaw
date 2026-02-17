@@ -2,19 +2,22 @@ import { ulid } from "ulid"
 import z from "zod"
 
 export namespace Id {
-  export const Prefix = {
+  const prefixes = {
     session: "ses",
   } as const
 
-  const LENGTH = 26
+  type PrefixKey = keyof typeof prefixes
 
-  export function create(prefix?: string) {
-    return prefix ? `${prefix}_${ulid()}` : ulid()
+  export function create(prefix?: PrefixKey) {
+    if (!prefix) return ulid()
+    const resolved = prefix in prefixes ? prefixes[prefix as PrefixKey] : prefix
+    return `${resolved}_${ulid()}`
   }
 
-  export function schema(prefix?: string) {
+  export function schema(prefix?: PrefixKey) {
     if (!prefix) return z.string().min(1)
-    const pattern = new RegExp(`^${prefix}_[0-9A-HJKMNP-TV-Z]{26}$`)
+    const resolved = prefix in prefixes ? prefixes[prefix as PrefixKey] : prefix
+    const pattern = new RegExp(`^${resolved}_[0-9A-HJKMNP-TV-Z]{26}$`)
     return z.string().regex(pattern)
   }
 }
