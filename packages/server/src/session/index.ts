@@ -13,8 +13,6 @@ export namespace Session {
       time: z.object({
         created: z.number(),
         updated: z.number(),
-        compacting: z.number().optional(),
-        archived: z.number().optional(),
       }),
     })
     .meta({
