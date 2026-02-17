@@ -5,9 +5,8 @@
     "fmt": "prettier --write .",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "generate:openapi": "bun run scripts/generate.ts",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db": "bun drizzle-kit",
+    "generate:openapi": "bun run scripts/generate.ts"
   },
   "dependencies": {
     "@hono/standard-validator": "^0.2.2",

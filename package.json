@@ -9,9 +9,9 @@
     "build:sdk": "bun run --cwd packages/sdk build",
     "build:web": "bun run --cwd packages/web build",
     "typecheck": "bun turbo typecheck",
-    "db:generate": "bun run --cwd packages/server db:generate",
-    "db:migrate": "bun run --cwd packages/server db:migrate",
-    "db:seed": "bun run --cwd packages/server seed"
+    "db": "bun run --cwd packages/server db",
+    "db:studio": "bun run --cwd packages/server db:studio",
+    "reset": "rm -rf node_modules packages/*/node_modules packages/server/data packages/server/migration"
   },
   "workspaces": {
     "packages": [

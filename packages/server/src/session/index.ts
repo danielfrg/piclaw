@@ -1,4 +1,8 @@
 import z from "zod"
+import { desc, eq } from "drizzle-orm"
+
+import { Database } from "@/storage/db"
+import { SessionTable } from "@/session/sql"
 import { Id } from "@/util/id"
 import { Log } from "@/util/log"
 
@@ -28,18 +32,44 @@ export namespace Session {
     title: z.string().optional(),
   })
 
-  const store = new Map<string, Info>()
+  type SessionRow = typeof SessionTable.$inferSelect
+
+  function fromRow(row: SessionRow): Info {
+    return {
+      id: row.id,
+      title: row.title,
+      time: {
+        created: row.createdAt.getTime(),
+        updated: row.updatedAt.getTime(),
+      },
+    }
+  }
+
+  function toRow(info: Info) {
+    return {
+      id: info.id,
+      title: info.title,
+      createdAt: new Date(info.time.created),
+      updatedAt: new Date(info.time.updated),
+    }
+  }
 
   function now() {
     return Date.now()
   }
 
   export function list(): Info[] {
-    return Array.from(store.values()).sort((a, b) => b.time.updated - a.time.updated)
+    const rows = Database.use((db) =>
+      db.select().from(SessionTable).orderBy(desc(SessionTable.updatedAt)).all(),
+    )
+    return rows.map(fromRow)
   }
 
   export function get(id: string): Info | null {
-    return store.get(id) ?? null
+    const row = Database.use((db) =>
+      db.select().from(SessionTable).where(eq(SessionTable.id, id)).get(),
+    )
+    return row ? fromRow(row) : null
   }
 
   export function create(input: z.infer<typeof CreateInput> = {}): Info {
@@ -52,22 +82,25 @@ export namespace Session {
         updated: time,
       },
     }
-    store.set(session.id, session)
-    return session
+    const row = Database.use((db) =>
+      db.insert(SessionTable).values(toRow(session)).returning().get(),
+    )
+    log.info("created", { id: session.id })
+    return row ? fromRow(row) : session
   }
 
   export function update(id: string, input: z.infer<typeof UpdateInput>): Info | null {
-    const current = store.get(id)
-    if (!current) return null
-    const next: Info = {
-      ...current,
-      title: input.title ?? current.title,
-      time: {
-        ...current.time,
-        updated: now(),
-      },
-    }
-    store.set(id, next)
-    return next
+    const row = Database.use((db) =>
+      db
+        .update(SessionTable)
+        .set({
+          title: input.title,
+          updatedAt: new Date(now()),
+        })
+        .where(eq(SessionTable.id, id))
+        .returning()
+        .get(),
+    )
+    return row ? fromRow(row) : null
   }
 }

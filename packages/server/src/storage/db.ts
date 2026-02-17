@@ -15,6 +15,9 @@ export namespace Database {
   type Schema = typeof schema
   type Client = BunSQLiteDatabase<Schema>
 
+  export type Transaction = Parameters<Parameters<Client["transaction"]>[0]>[0]
+  export type TxOrDb = Transaction | Client
+
   log.info("opening database", { path: Database.Path })
 
   const sqlite = new BunDatabase(Database.Path, { create: true })
@@ -27,4 +30,12 @@ export namespace Database {
   sqlite.run("PRAGMA wal_checkpoint(PASSIVE)")
 
   export const Client = drizzle({ client: sqlite, schema })
+
+  export function use<T>(callback: (db: TxOrDb) => T): T {
+    return callback(Client)
+  }
+
+  export function transaction<T>(callback: (tx: Transaction) => T): T {
+    return Client.transaction((tx) => callback(tx))
+  }
 }
