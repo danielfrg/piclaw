@@ -1,6 +1,8 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { serveStatic } from "hono/bun"
+import { apiReference } from "@scalar/hono-api-reference"
+import { openAPIRouteHandler } from "hono-openapi"
 
 import { SessionRoutes } from "@/routes/session"
 import { Log } from "@/util/log"
@@ -23,6 +25,24 @@ app.use(
 )
 
 app.route("/api/session", SessionRoutes())
+
+app.get(
+  "/api/openapi.json",
+  openAPIRouteHandler(app, {
+    documentation: {
+      info: {
+        title: "Codec Server API",
+        version: "0.1.0",
+      },
+    },
+  }),
+)
+app.get(
+  "/api/scalar",
+  apiReference({
+    url: "/api/openapi.json",
+  } as any),
+)
 
 if (isProd) {
   // Prod: Serve static files
