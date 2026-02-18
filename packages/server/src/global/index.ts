@@ -5,7 +5,7 @@ import fs from "fs/promises"
 import { xdgData, xdgCache, xdgConfig, xdgState } from "xdg-basedir"
 
 export namespace Global {
-  const appName = "codec"
+  const appName = "piclaw"
   const isDev = process.env.NODE_ENV !== "production"
 
   const root = isDev ? path.join(resolveRepoRoot(), "data") : xdgData!
@@ -17,7 +17,7 @@ export namespace Global {
 
   export const Path = {
     get home() {
-      return process.env.CODEC_HOME || os.homedir()
+      return process.env.PICLAW_HOME || os.homedir()
     },
     data: data,
     log: path.join(data, "log"),

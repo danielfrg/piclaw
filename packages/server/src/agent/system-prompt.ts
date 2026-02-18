@@ -4,7 +4,7 @@ export type SystemPromptOptions = {
 }
 
 export function buildSystemPrompt(options: SystemPromptOptions = {}) {
-  const appName = options.appName ?? "Codec"
+  const appName = options.appName ?? "PiClaw"
   const tone = options.tone ?? "concise"
 
   return [

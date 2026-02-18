@@ -18,6 +18,7 @@ describe("Agent", () => {
     })
 
     await agent.prompt("Hello from a test prompt.")
+
     const lastMessage = agent.state.messages[agent.state.messages.length - 1]
     expect(lastMessage?.role).toBe("assistant")
     if (lastMessage?.role === "assistant") {

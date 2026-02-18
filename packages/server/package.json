@@ -1,5 +1,5 @@
 {
-  "name": "@codec/server",
+  "name": "@piclaw/server",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "fmt": "prettier --write .",

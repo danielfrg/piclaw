@@ -4,16 +4,16 @@ import path from "path"
 import { sql } from "drizzle-orm"
 
 let tempDir: string
-const originalDbPath = process.env.CODEC_DB_PATH
+const originalDbPath = process.env.PICLAW_DB_PATH
 
 beforeEach(async () => {
   tempDir = await fs.mkdtemp(path.join(process.cwd(), ".tmp-db-"))
-  process.env.CODEC_DB_PATH = path.join(tempDir, "app.db")
+  process.env.PICLAW_DB_PATH = path.join(tempDir, "app.db")
 })
 
 afterEach(async () => {
   await fs.rm(tempDir, { recursive: true, force: true })
-  restoreEnv("CODEC_DB_PATH", originalDbPath)
+  restoreEnv("PICLAW_DB_PATH", originalDbPath)
 })
 
 function restoreEnv(key: string, value: string | undefined) {

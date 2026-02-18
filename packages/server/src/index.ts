@@ -31,7 +31,7 @@ app.get(
   openAPIRouteHandler(app, {
     documentation: {
       info: {
-        title: "Codec Server API",
+        title: "PiClaw Server API",
         version: "0.1.0",
       },
     },

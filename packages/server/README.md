@@ -1,4 +1,4 @@
-# codec API
+# PiClaw API
 
 ```sh
 bun run dev
