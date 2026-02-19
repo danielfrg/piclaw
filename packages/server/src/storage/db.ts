@@ -3,14 +3,14 @@ import path from "path"
 
 import { Database as BunDatabase } from "bun:sqlite"
 
-import { Global } from "@/global"
+import { paths } from "@piclaw/agent"
 import { Log } from "@/util/log"
 import * as schema from "@/storage/schema"
 
 const log = Log.create({ service: "db" })
 
 export namespace Database {
-  export const Path = process.env.PICLAW_DB_PATH || path.join(Global.Path.data, "app.db")
+  export const Path = process.env.PICLAW_DB_PATH || path.join(paths.data, "app.db")
 
   type Schema = typeof schema
   type Client = BunSQLiteDatabase<Schema>

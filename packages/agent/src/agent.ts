@@ -1,7 +1,96 @@
+import { Agent as PiAgent } from "@mariozechner/pi-agent-core"
+import type { AgentEvent, AgentTool, AgentMessage } from "@mariozechner/pi-agent-core"
 import type { Api, Model } from "@mariozechner/pi-ai"
 import { getModel } from "@mariozechner/pi-ai"
+import z from "zod"
 
-import { Config } from "@/config/config"
+import { buildSystemPrompt, type SystemPromptOptions } from "./prompts"
+
+import { loadConfig } from "./config"
+
+export const AgentSchema = z
+  .object({
+    name: z.string(),
+    description: z.string(),
+    model: z.object({
+      modelID: z.string(),
+      providerID: z.string(),
+    }),
+  })
+  .meta({ ref: "Agent" })
+
+export type AgentSchema = z.infer<typeof AgentSchema>
+
+export type AgentOptions = {
+  model?: Model<Api>
+  modelId?: string
+  systemPrompt?: string
+  systemPromptOptions?: SystemPromptOptions
+  tools?: AgentTool<any>[]
+}
+
+export class Agent {
+  private agent: PiAgent
+
+  private constructor(agent: PiAgent) {
+    this.agent = agent
+  }
+
+  static async create(options: AgentOptions = {}): Promise<Agent> {
+    const model = options.model ?? (await resolveModel(options.modelId))
+    const systemPrompt = options.systemPrompt ?? buildSystemPrompt(options.systemPromptOptions)
+
+    const agent = new PiAgent({
+      initialState: {
+        systemPrompt,
+        model: model as any,
+        tools: options.tools ?? [],
+      },
+    })
+
+    return new Agent(agent)
+  }
+
+  subscribe(fn: (event: AgentEvent) => void): () => void {
+    return this.agent.subscribe(fn)
+  }
+
+  async prompt(input: string): Promise<void> {
+    return this.agent.prompt(input)
+  }
+
+  abort(): void {
+    this.agent.abort()
+  }
+
+  async waitForIdle(): Promise<void> {
+    return this.agent.waitForIdle()
+  }
+
+  get state() {
+    return this.agent.state
+  }
+
+  get messages(): AgentMessage[] {
+    return this.agent.state.messages
+  }
+
+  get isStreaming(): boolean {
+    return this.agent.state.isStreaming
+  }
+
+  setModel(model: Model<Api>): void {
+    this.agent.setModel(model as any)
+  }
+
+  setTools(tools: AgentTool<any>[]): void {
+    this.agent.setTools(tools)
+  }
+
+  setSystemPrompt(prompt: string): void {
+    this.agent.setSystemPrompt(prompt)
+  }
+}
 
 const DEFAULT_CONTEXT_WINDOW = 200_000
 const DEFAULT_MAX_TOKENS = 4096
@@ -53,7 +142,7 @@ function buildCustomModel(params: {
 }
 
 export async function resolveModel(modelId?: string): Promise<Model<Api>> {
-  const config = await Config.load()
+  const config = await loadConfig()
   const selected = modelId ?? config.defaultModel
   if (!selected) {
     throw new Error("No model specified. Set defaultModel in config or provide a model id.")

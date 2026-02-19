@@ -1,19 +1,15 @@
 import { describe, test, expect } from "bun:test"
 
-import { Agent } from "@/agent/agent"
-import { resolveModel } from "@/agent/model"
-import { Config } from "@/config/config"
+import { Agent, loadConfig } from "@piclaw/agent"
 
 describe("Agent", () => {
   test("prompts with configured model (integration)", async () => {
-    const config = await Config.load()
+    const config = await loadConfig()
     if (!config.defaultModel && !config.models?.["litellm/claude-sonnet-4-5"]) return
     if (!process.env.ANTHROPIC_API_KEY) return
 
-    const model = await resolveModel("litellm/claude-sonnet-4-5")
-
-    const agent = Agent.create({
-      model,
+    const agent = await Agent.create({
+      modelId: "litellm/claude-sonnet-4-5",
       systemPrompt: "You are a helpful assistant.",
     })
 
@@ -26,11 +22,6 @@ describe("Agent", () => {
         console.log(`\nassistant error: ${lastMessage.errorMessage}`)
       }
       expect(lastMessage.stopReason).not.toBe("error")
-      // const text = lastMessage.content
-      //   ?.filter((block: any) => block.type === "text")
-      //   .map((block: any) => block.text)
-      //   .join("")
-      // console.log(`\nassistant: ${text}`)
     }
     expect(agent.state.messages.length).toBeGreaterThan(0)
   })
