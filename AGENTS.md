@@ -1,6 +1,14 @@
 # piclaw
 
-Sources for the different libraries used in the project.
+A simple personal AI agent based on pi, inspired by OpenClaw anc OpenCode.
+
+Project structure:
+
+- packages/agent: agent code
+- packages/tui: terminal user interface that uses the agent
+- packages/server: server code
+
+Sources for the different libraries that this project uses or is based on:
 
 - pi: ../pi-mono
 - opencode: ../opencode
