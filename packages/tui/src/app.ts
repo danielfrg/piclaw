@@ -1,8 +1,18 @@
 import { ProcessTerminal, TUI, Container, Input, Text, Spacer, Loader, matchesKey } from "@mariozechner/pi-tui"
 import type { Component } from "@mariozechner/pi-tui"
 
-import { dim, blue, yellow, purple, bold, red } from "./theme"
+import { dim, blue, yellow, purple, bold, red, green } from "./theme"
 import { StreamingAssistantMessage } from "./components/message"
+
+export type ToolInfo = {
+  name: string
+  description: string
+}
+
+export type SkillInfo = {
+  name: string
+  description: string
+}
 
 export type AppCallbacks = {
   onSubmit: (text: string) => void
@@ -20,9 +30,15 @@ export class App {
   private modelIndex: number
   private isProcessing = false
   private activeLoader: Loader | null = null
+  private activeToolLoader: Loader | null = null
   private callbacks: AppCallbacks
 
-  constructor(models: string[], defaultModelIndex: number, callbacks: AppCallbacks) {
+  constructor(
+    models: string[],
+    defaultModelIndex: number,
+    callbacks: AppCallbacks,
+    options?: { tools?: ToolInfo[]; skills?: SkillInfo[] },
+  ) {
     this.models = models
     this.modelIndex = defaultModelIndex
     this.callbacks = callbacks
@@ -45,6 +61,27 @@ export class App {
 
     this.ui.setFocus(new KeyHandler(this))
     this.updateStatusBar()
+
+    this.showStartupInfo(options?.tools ?? [], options?.skills ?? [])
+  }
+
+  private showStartupInfo(tools: ToolInfo[], skills: SkillInfo[]): void {
+    this.chatContainer.addChild(new Text(bold(blue("piclaw")), 1, 0))
+    this.chatContainer.addChild(new Text(dim(`model: ${this.currentModelId()}`), 1, 0))
+
+    if (tools.length > 0) {
+      const toolNames = tools.map((t) => t.name).join(", ")
+      this.chatContainer.addChild(new Text(dim(`tools: ${toolNames}`), 1, 0))
+    } else {
+      this.chatContainer.addChild(new Text(dim("tools: none"), 1, 0))
+    }
+
+    if (skills.length > 0) {
+      const skillNames = skills.map((s) => s.name).join(", ")
+      this.chatContainer.addChild(new Text(dim(`skills: ${skillNames}`), 1, 0))
+    }
+
+    this.chatContainer.addChild(new Spacer(1))
   }
 
   start(): void {
@@ -109,6 +146,26 @@ export class App {
     this.chatContainer.addChild(msg)
     this.requestRender()
     return msg
+  }
+
+  showToolExecution(toolName: string): void {
+    this.hideToolExecution()
+    this.activeToolLoader = new Loader(
+      this.ui,
+      (s) => yellow(s),
+      (m) => dim(m),
+      `Running ${toolName}...`,
+    )
+    this.chatContainer.addChild(this.activeToolLoader)
+    this.requestRender()
+  }
+
+  hideToolExecution(): void {
+    if (this.activeToolLoader) {
+      this.activeToolLoader.stop()
+      this.chatContainer.removeChild(this.activeToolLoader)
+      this.activeToolLoader = null
+    }
   }
 
   showError(message: string): void {

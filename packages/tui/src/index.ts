@@ -1,6 +1,7 @@
-import { Agent, loadConfig, resolveModel, type AgentEvent } from "@piclaw/agent"
+import { Agent, loadConfig, loadSkills, resolveModel, echoTool, bashTool, type AgentEvent } from "@piclaw/agent"
 
 import { App } from "./app"
+import type { ToolInfo, SkillInfo } from "./app"
 import type { StreamingAssistantMessage } from "./components/message"
 
 // Bootstrap
@@ -16,19 +17,47 @@ if (config.defaultModel && models.includes(config.defaultModel)) {
   defaultModelIndex = models.indexOf(config.defaultModel)
 }
 
+// Load skills from config
+const skillPaths = config.skills ?? []
+const { skills } = loadSkills({ skillPaths })
+
+// Define available tools
+const tools = [bashTool, echoTool]
+
+// Build info for TUI display
+const toolInfos: ToolInfo[] = tools.map((t) => ({ name: t.name, description: t.description }))
+const skillInfos: SkillInfo[] = skills.map((s) => ({ name: s.name, description: s.description }))
+
 let currentAgent: Agent | null = null
 let streaming: StreamingAssistantMessage | null = null
 
+const VISIBLE_EVENT_TYPES = new Set(["text_start", "text_delta", "thinking_start", "thinking_delta"])
+
 function subscribeToAgent(agent: Agent): void {
   agent.subscribe((event: AgentEvent) => {
-    if (event.type === "message_start") {
-      app.hideLoader()
-      streaming = app.beginAssistantMessage()
+    // Create the streaming message lazily on first visible content
+    if (event.type === "message_update") {
+      if (!streaming && VISIBLE_EVENT_TYPES.has(event.assistantMessageEvent.type)) {
+        app.hideLoader()
+        streaming = app.beginAssistantMessage()
+      }
+      if (streaming) {
+        streaming.updateContent(event.message)
+        app.requestRender()
+      }
+    }
+
+    if (event.type === "message_end") {
+      streaming = null
+    }
+
+    if (event.type === "tool_execution_start") {
+      app.showToolExecution(event.toolName)
       app.requestRender()
     }
 
-    if (event.type === "message_update" && streaming) {
-      streaming.updateContent(event.message)
+    if (event.type === "tool_execution_end") {
+      app.hideToolExecution()
       app.requestRender()
     }
 
@@ -39,46 +68,55 @@ function subscribeToAgent(agent: Agent): void {
   })
 }
 
-const app = new App(models, defaultModelIndex, {
-  onSubmit: (text) => {
-    app.addUserMessage(text)
-    app.setProcessing(true)
-    app.showLoader()
+const app = new App(
+  models,
+  defaultModelIndex,
+  {
+    onSubmit: (text) => {
+      app.addUserMessage(text)
+      app.setProcessing(true)
+      app.showLoader()
 
-    const run = async () => {
-      try {
-        if (!currentAgent) {
-          currentAgent = await Agent.create({ modelId: app.currentModelId() })
-          subscribeToAgent(currentAgent)
+      const run = async () => {
+        try {
+          if (!currentAgent) {
+            currentAgent = await Agent.create({
+              modelId: app.currentModelId(),
+              tools,
+              skills,
+            })
+            subscribeToAgent(currentAgent)
+          }
+
+          await currentAgent.prompt(text)
+        } catch (err) {
+          app.hideLoader()
+          app.showError(err instanceof Error ? err.message : String(err))
+          streaming = null
+          app.setProcessing(false)
         }
+      }
 
-        await currentAgent.prompt(text)
-      } catch (err) {
+      run()
+    },
+
+    onAbort: () => {
+      if (currentAgent) {
+        currentAgent.abort()
         app.hideLoader()
-        app.showError(err instanceof Error ? err.message : String(err))
         streaming = null
         app.setProcessing(false)
       }
-    }
+    },
 
-    run()
+    onModelChange: async (modelId) => {
+      const model = await resolveModel(modelId)
+      if (currentAgent) {
+        currentAgent.setModel(model)
+      }
+    },
   },
-
-  onAbort: () => {
-    if (currentAgent) {
-      currentAgent.abort()
-      app.hideLoader()
-      streaming = null
-      app.setProcessing(false)
-    }
-  },
-
-  onModelChange: async (modelId) => {
-    const model = await resolveModel(modelId)
-    if (currentAgent) {
-      currentAgent.setModel(model)
-    }
-  },
-})
+  { tools: toolInfos, skills: skillInfos },
+)
 
 app.start()

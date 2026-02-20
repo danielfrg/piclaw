@@ -5,58 +5,71 @@ import { getModel } from "@mariozechner/pi-ai"
 import z from "zod"
 
 import { buildSystemPrompt, type SystemPromptOptions } from "./prompts"
+import { loadSkills, type Skill } from "./skills"
 
 import { loadConfig } from "./config"
 
-export const AgentSchema = z
-  .object({
-    name: z.string(),
-    description: z.string(),
-    model: z.object({
-      modelID: z.string(),
-      providerID: z.string(),
-    }),
-  })
-  .meta({ ref: "Agent" })
-
-export type AgentSchema = z.infer<typeof AgentSchema>
+const DEFAULT_CONTEXT_WINDOW = 200_000
+const DEFAULT_MAX_TOKENS = 4096
 
 export type AgentOptions = {
   model?: Model<Api>
   modelId?: string
   systemPrompt?: string
   systemPromptOptions?: SystemPromptOptions
-  tools?: AgentTool<any>[]
+  tools?: AgentTool<any, any>[]
+  skills?: Skill[]
+  skillPaths?: string[]
 }
 
 export class Agent {
   private agent: PiAgent
+  readonly skills: Skill[]
 
-  private constructor(agent: PiAgent) {
+  private constructor(agent: PiAgent, skills: Skill[]) {
     this.agent = agent
+    this.skills = skills
   }
 
   static async create(options: AgentOptions = {}): Promise<Agent> {
-    const model = options.model ?? (await resolveModel(options.modelId))
-    const systemPrompt = options.systemPrompt ?? buildSystemPrompt(options.systemPromptOptions)
+    const config = await loadConfig()
+    const model: Model<Api> = options.model ?? (await resolveModel(options.modelId))
+
+    // Load skills from explicit option, config paths, or explicit skillPaths
+    let skills: Skill[] = []
+    if (options.skills) {
+      skills = options.skills
+    } else {
+      const allPaths = [...(config.skills ?? []), ...(options.skillPaths ?? [])]
+      if (allPaths.length > 0) {
+        const result = loadSkills({ skillPaths: allPaths })
+        skills = result.skills
+      }
+    }
+
+    const systemPromptOptions: SystemPromptOptions = {
+      ...options.systemPromptOptions,
+      skills,
+    }
+    const systemPrompt = options.systemPrompt ?? buildSystemPrompt(systemPromptOptions)
 
     const agent = new PiAgent({
       initialState: {
         systemPrompt,
-        model: model as any,
+        model: model,
         tools: options.tools ?? [],
       },
     })
 
-    return new Agent(agent)
-  }
-
-  subscribe(fn: (event: AgentEvent) => void): () => void {
-    return this.agent.subscribe(fn)
+    return new Agent(agent, skills)
   }
 
   async prompt(input: string): Promise<void> {
     return this.agent.prompt(input)
+  }
+
+  subscribe(fn: (event: AgentEvent) => void): () => void {
+    return this.agent.subscribe(fn)
   }
 
   abort(): void {
@@ -91,9 +104,6 @@ export class Agent {
     this.agent.setSystemPrompt(prompt)
   }
 }
-
-const DEFAULT_CONTEXT_WINDOW = 200_000
-const DEFAULT_MAX_TOKENS = 4096
 
 function parseModelId(value: string) {
   const [provider, ...rest] = value.split("/")

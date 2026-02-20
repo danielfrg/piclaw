@@ -73,6 +73,7 @@ export type ConfigModelSchema = z.infer<typeof ConfigModelSchema>
 export const ConfigSchema = z.object({
   defaultModel: z.string().optional(),
   models: z.record(z.string(), ConfigModelSchema).optional(),
+  skills: z.array(z.string()).optional(),
 })
 export type ConfigSchema = z.infer<typeof ConfigSchema>
 
