@@ -57,6 +57,7 @@ export class Agent {
       initialState: {
         systemPrompt,
         model: model,
+        thinkingLevel: model.reasoning ? "medium" : "off",
         tools: options.tools ?? [],
       },
     })

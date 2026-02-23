@@ -22,7 +22,8 @@ export class StreamingAssistantMessage extends Container {
       if (b.type === "text" && b.text?.trim()) {
         this.content.addChild(new Markdown(b.text.trim(), 1, 0, mdTheme))
       } else if (b.type === "thinking" && b.thinking?.trim()) {
-        this.content.addChild(new Text(italic(dim(b.thinking.trim())), 1, 0))
+        this.content.addChild(new Text(dim(italic("Thinking")), 1, 0))
+        this.content.addChild(new Text(dim(b.thinking.trim()), 1, 0))
       }
     }
 
