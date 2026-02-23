@@ -70,10 +70,18 @@ export const ConfigModelSchema = z.object({
 })
 export type ConfigModelSchema = z.infer<typeof ConfigModelSchema>
 
+export const VectorDBConfigSchema = z.object({
+  type: z.enum(["qdrant"]).default("qdrant"),
+  url: z.string().optional(),
+  collection: z.string().optional(),
+})
+export type VectorDBConfigSchema = z.infer<typeof VectorDBConfigSchema>
+
 export const ConfigSchema = z.object({
   defaultModel: z.string().optional(),
   models: z.record(z.string(), ConfigModelSchema).optional(),
   skills: z.array(z.string()).optional(),
+  vectordb: VectorDBConfigSchema.optional(),
 })
 export type ConfigSchema = z.infer<typeof ConfigSchema>
 
@@ -83,7 +91,7 @@ export async function loadConfig(): Promise<ConfigSchema> {
     if (err?.code === "ENOENT") return ""
     throw err
   })
-  if (!text) return {}
+  if (!text) return applyEnvOverrides({})
 
   const rawText = text.replace(/\$\{([A-Z0-9_]+)\}/g, (_match, key) => {
     return process.env[key] ?? ""
@@ -94,5 +102,25 @@ export async function loadConfig(): Promise<ConfigSchema> {
     log.error("invalid config", { path: filepath, error: parsed.error.flatten() })
     throw parsed.error
   }
-  return parsed.data
+  return applyEnvOverrides(parsed.data)
+}
+
+/** Apply PICLAW_ env var overrides to config values. */
+function applyEnvOverrides(config: ConfigSchema): ConfigSchema {
+  const qdrantUrl = process.env.PICLAW_QDRANT_URL
+  const qdrantCollection = process.env.PICLAW_QDRANT_COLLECTION
+
+  if (qdrantUrl || qdrantCollection) {
+    config = {
+      ...config,
+      vectordb: {
+        type: "qdrant" as const,
+        ...config.vectordb,
+        ...(qdrantUrl && { url: qdrantUrl }),
+        ...(qdrantCollection && { collection: qdrantCollection }),
+      },
+    }
+  }
+
+  return config
 }

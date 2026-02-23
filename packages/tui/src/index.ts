@@ -1,4 +1,13 @@
-import { Agent, loadConfig, loadSkills, resolveModel, echoTool, bashTool, type AgentEvent } from "@piclaw/agent"
+import {
+  Agent,
+  loadConfig,
+  loadSkills,
+  resolveModel,
+  echoTool,
+  bashTool,
+  createNotesSearchTool,
+  type AgentEvent,
+} from "@piclaw/agent"
 
 import { App } from "./app"
 import type { ToolInfo, SkillInfo } from "./app"
@@ -21,8 +30,14 @@ if (config.defaultModel && models.includes(config.defaultModel)) {
 const skillPaths = config.skills ?? []
 const { skills } = loadSkills({ skillPaths })
 
-// Define available tools
-const tools = [bashTool, echoTool]
+// Build tools list, conditionally including notes search if vectordb is configured
+const tools = config.vectordb?.url
+  ? [
+      bashTool,
+      echoTool,
+      createNotesSearchTool({ qdrantUrl: config.vectordb.url, collection: config.vectordb.collection ?? "notes" }),
+    ]
+  : [bashTool, echoTool]
 
 // Build info for TUI display
 const toolInfos: ToolInfo[] = tools.map((t) => ({ name: t.name, description: t.description }))

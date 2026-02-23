@@ -3,6 +3,7 @@ export { buildSystemPrompt, type SystemPromptOptions } from "./prompts"
 export { loadConfig, ConfigSchema, ConfigModelSchema, paths } from "./config"
 export { createLogger, initLog, defaultLogger, LogLevel, type Logger, type LogOptions } from "./log"
 export { echoTool } from "./tools/echo"
+export { createNotesSearchTool, type NotesSearchConfig } from "./tools/notes-search"
 export {
   loadSkills,
   formatSkillsForPrompt,
