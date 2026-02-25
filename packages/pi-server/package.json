@@ -2,6 +2,7 @@
   "name": "@piclaw/pi-server",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
+    "generate": "bun run scripts/generate.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
