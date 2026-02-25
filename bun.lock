@@ -35,6 +35,26 @@
         "@types/bun": "catalog:",
       },
     },
+    "packages/pi-server": {
+      "name": "@piclaw/pi-server",
+      "dependencies": {
+        "@hono/standard-validator": "^0.2.2",
+        "@mariozechner/pi-coding-agent": "^0.52.12",
+        "@scalar/hono-api-reference": "^0.9.39",
+        "@standard-community/standard-json": "^0.3.5",
+        "@standard-community/standard-openapi": "^0.2.9",
+        "@types/json-schema": "^7.0.15",
+        "hono": "catalog:",
+        "hono-openapi": "catalog:",
+        "openapi-types": "^12.1.3",
+        "ulid": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+      },
+    },
     "packages/server": {
       "name": "@piclaw/server",
       "dependencies": {
@@ -335,6 +355,8 @@
     "@noble/hashes": ["@noble/hashes@2.0.1", "", {}, "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="],
 
     "@piclaw/agent": ["@piclaw/agent@workspace:packages/agent"],
+
+    "@piclaw/pi-server": ["@piclaw/pi-server@workspace:packages/pi-server"],
 
     "@piclaw/server": ["@piclaw/server@workspace:packages/server"],
 
