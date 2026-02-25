@@ -9,10 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@danielfrg/solid-ui": "^0.0.4",
     "solid-js": "^1.9.10"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
     "@types/node": "^24.10.1",
+    "tailwindcss": "catalog:",
     "typescript": "~5.9.3",
     "vite": "^8.0.0-beta.13",
     "vite-plugin-solid": "^2.11.10"

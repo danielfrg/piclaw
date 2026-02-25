@@ -16,6 +16,7 @@ Sources for the different libraries that this project uses or is based on:
 - pi: ../pi-mono
 - opencode: ../opencode
 - openclaw: ../openclaw
+- @danielfrg/solid-ui: ../components/solid-ui
 
 ## Coding Conventions
 
