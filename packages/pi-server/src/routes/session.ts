@@ -23,6 +23,7 @@ import {
   updateSession,
   type SessionRecord,
 } from "@/session/store"
+import { flushSession } from "@/session/persist"
 import { Id } from "@/util/id"
 
 const sessionParamSchema = z.object({
@@ -291,6 +292,19 @@ export function SessionRoutes() {
         })
         appendMessage(sessionID, userMessage)
 
+        if (input.noReply) {
+          // Persist user-only messages immediately for REST usage without waiting on the agent.
+          // SessionManager only writes after an assistant message by default.
+          const sessionManager = session.runtime.sessionManager
+          sessionManager.appendMessage(buildAgentUserMessage(promptText))
+          const sessionFile = flushSession(sessionManager)
+          if (sessionFile) {
+            // Mark the session as flushed so future assistant messages append incrementally.
+            sessionManager.setSessionFile(sessionFile)
+          }
+          return c.json(userMessage)
+        }
+
         setSessionStatus(sessionID, "running")
         try {
           if (input.model) {
@@ -407,6 +421,18 @@ function buildUserMessage(input: {
       model: input.model,
     },
     parts: [part],
+  }
+}
+
+function buildAgentUserMessage(text: string): {
+  role: "user"
+  content: { type: "text"; text: string }[]
+  timestamp: number
+} {
+  return {
+    role: "user",
+    content: [{ type: "text", text }],
+    timestamp: Date.now(),
   }
 }
 

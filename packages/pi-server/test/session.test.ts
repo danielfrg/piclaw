@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test"
-import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
@@ -47,7 +47,7 @@ describe("session create", () => {
     }
   })
 
-  it("creates a session file on creation", async () => {
+  it("persists user-only messages without waiting for an assistant", async () => {
     const app = createApp()
     const client = createClient({
       baseUrl: "http://localhost",
@@ -64,5 +64,24 @@ describe("session create", () => {
 
     const jsonlFiles = readdirSync(sessionDir).filter((name) => name.endsWith(".jsonl"))
     expect(jsonlFiles.length).toBe(1)
+
+    const promptResponse = await client.session.prompt({
+      sessionID: session.id,
+      noReply: true,
+      parts: [{ type: "text", text: "Hello from user" }],
+    })
+    expect(promptResponse.error).toBeUndefined()
+
+    const sessionFile = join(sessionDir, jsonlFiles[0] ?? "")
+    const entries = readFileSync(sessionFile, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { type: string; message?: { role?: string } })
+
+    const userMessages = entries.filter((entry) => entry.type === "message" && entry.message?.role === "user")
+    const assistantMessages = entries.filter((entry) => entry.type === "message" && entry.message?.role === "assistant")
+
+    expect(userMessages.length).toBe(1)
+    expect(assistantMessages.length).toBe(0)
   })
 })
