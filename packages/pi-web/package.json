@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@danielfrg/solid-ui": "^0.0.4",
+    "lucide-solid": "^0.575.0",
     "solid-js": "^1.9.10"
   },
   "devDependencies": {
