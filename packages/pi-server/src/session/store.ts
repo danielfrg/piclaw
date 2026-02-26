@@ -1,6 +1,7 @@
 import type { AgentSession } from "@mariozechner/pi-coding-agent"
 
 import type { MessageWithParts, SessionInfo } from "@/schema"
+import { flushSession } from "@/session/persist"
 import { createSessionRuntime } from "@/session/runtime"
 
 export type SessionStatus = "idle" | "running"
@@ -31,6 +32,12 @@ export async function createSession(input: {
 }): Promise<SessionRecord> {
   const directory = input.directory ?? process.cwd()
   const runtime = await createSessionRuntime(directory)
+  const sessionFile = flushSession(runtime.sessionManager)
+  if (sessionFile) {
+    // Reload from disk to mark the session as flushed.
+    // Without this, the first assistant message would bulk-write entries again.
+    runtime.sessionManager.setSessionFile(sessionFile)
+  }
   const now = Date.now()
   const id = `ses_${runtime.sessionId}`
 

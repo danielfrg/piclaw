@@ -51,6 +51,7 @@
         "zod": "catalog:",
       },
       "devDependencies": {
+        "@piclaw/sdk": "workspace:*",
         "@tsconfig/bun": "catalog:",
         "@types/bun": "catalog:",
       },
@@ -60,6 +61,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@danielfrg/solid-ui": "^0.0.4",
+        "@piclaw/sdk": "workspace:*",
         "lucide-solid": "^0.575.0",
         "solid-js": "^1.9.10",
       },

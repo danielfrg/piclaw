@@ -3,7 +3,8 @@
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "generate": "bun run scripts/generate.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@hono/standard-validator": "^0.2.2",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@tsconfig/bun": "catalog:",
-    "@types/bun": "catalog:"
+    "@types/bun": "catalog:",
+    "@piclaw/sdk": "workspace:*"
   }
 }
