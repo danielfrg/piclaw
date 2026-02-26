@@ -24,6 +24,7 @@ import {
   type SessionRecord,
 } from "@/session/store"
 import { flushSession } from "@/session/persist"
+import { log } from "@/util/log"
 import { Id } from "@/util/id"
 
 const sessionParamSchema = z.object({
@@ -89,10 +90,12 @@ export function SessionRoutes() {
       validator("json", SessionCreateInputSchema),
       async (c) => {
         const input = c.req.valid("json")
+        log.info({ parentID: input.parentID, title: input.title }, "session.create")
         const session = await createSession({
           title: input.title,
           parentID: input.parentID,
         })
+        log.info({ sessionID: session.info.id }, "session.created")
         return c.json(session.info)
       },
     )
@@ -268,21 +271,25 @@ export function SessionRoutes() {
         const input = c.req.valid("json")
         const session = getSession(sessionID)
         if (!session) {
+          log.warn({ sessionID }, "session.prompt.not_found")
           return c.json({ error: "Session not found" }, 404)
         }
 
         if (session.status === "running") {
+          log.warn({ sessionID }, "session.prompt.already_running")
           return c.json({ error: "Session already running" }, 409)
         }
 
         const promptText = extractPromptText(input)
         if (!promptText) {
+          log.warn({ sessionID }, "session.prompt.empty")
           return c.json({ error: "Prompt text is required" }, 400)
         }
 
         const modelRef = resolveModelRef(session)
         const userMessageId = input.messageID ?? Id.create("message")
         const agentName = input.agent ?? "pi"
+        log.info({ sessionID, messageID: userMessageId, agent: agentName, model: modelRef }, "session.prompt")
         const userMessage = buildUserMessage({
           sessionID,
           messageID: userMessageId,
@@ -293,6 +300,7 @@ export function SessionRoutes() {
         appendMessage(sessionID, userMessage)
 
         if (input.noReply) {
+          log.info({ sessionID, messageID: userMessageId }, "session.prompt.no_reply")
           // Persist user-only messages immediately for REST usage without waiting on the agent.
           // SessionManager only writes after an assistant message by default.
           const sessionManager = session.runtime.sessionManager
@@ -310,6 +318,15 @@ export function SessionRoutes() {
           if (input.model) {
             await setSessionModel(session, input.model)
           }
+          log.info(
+            {
+              sessionID,
+              model: session.runtime.model
+                ? { providerID: session.runtime.model.provider, modelID: session.runtime.model.id }
+                : null,
+            },
+            "session.prompt.model",
+          )
           await session.runtime.prompt(promptText)
           const assistantText = extractAssistantText(session)
           const assistantMessage = buildAssistantMessage({
@@ -321,8 +338,10 @@ export function SessionRoutes() {
             cwd: session.info.directory,
           })
           appendMessage(sessionID, assistantMessage)
+          log.info({ sessionID, messageID: assistantMessage.info.id }, "session.prompt.completed")
           return c.json(assistantMessage)
         } catch (error) {
+          log.error({ sessionID, error }, "session.prompt.failed")
           return c.json({ error: errorMessage(error) }, 400)
         } finally {
           setSessionStatus(sessionID, "idle")
@@ -501,8 +520,8 @@ function extractAssistantText(session: SessionRecord): string {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i]
     if (!message) continue
-    if (message.role === "assistant") {
-      return extractTextFromContent(message.content)
+    if ((message as { role?: string }).role === "assistant") {
+      return extractTextFromContent((message as { content: unknown }).content)
     }
   }
   return ""

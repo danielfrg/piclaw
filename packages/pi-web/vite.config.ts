@@ -25,4 +25,18 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    outDir: "../pi-server/dist/static",
+    emptyOutDir: true,
+  },
+  server: {
+    port: 5173,
+    strictPort: true,
+    origin: "http://localhost:3000",
+    hmr: {
+      host: "localhost",
+      port: 5173,
+      protocol: "ws",
+    },
+  },
 })
