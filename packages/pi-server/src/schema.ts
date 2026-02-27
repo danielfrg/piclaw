@@ -34,22 +34,51 @@ export const SessionSchema = z
   })
   .meta({ ref: "Session" })
 
-export const TextPartSchema = z.object({
+const PartTimeSchema = z
+  .object({
+    start: z.number().optional(),
+    end: z.number().optional(),
+  })
+  .optional()
+
+const PartBaseSchema = z.object({
   id: Id.schema("part"),
   sessionID: Id.schema("session"),
   messageID: Id.schema("message"),
-  type: z.literal("text"),
-  text: z.string(),
   synthetic: z.boolean().optional(),
   ignored: z.boolean().optional(),
-  time: z
-    .object({
-      start: z.number().optional(),
-      end: z.number().optional(),
-    })
-    .optional(),
+  time: PartTimeSchema,
   metadata: z.record(z.string(), z.unknown()).optional(),
 })
+
+export const TextPartSchema = PartBaseSchema.extend({
+  type: z.literal("text"),
+  text: z.string(),
+}).meta({ ref: "TextPart" })
+
+export const ThinkingPartSchema = PartBaseSchema.extend({
+  type: z.literal("thinking"),
+  thinking: z.string(),
+}).meta({ ref: "ThinkingPart" })
+
+export const ToolCallPartSchema = PartBaseSchema.extend({
+  type: z.literal("tool-call"),
+  toolCallId: z.string().min(1),
+  toolName: z.string().min(1),
+  args: z.record(z.string(), z.unknown()),
+}).meta({ ref: "ToolCallPart" })
+
+export const ToolResultPartSchema = PartBaseSchema.extend({
+  type: z.literal("tool-result"),
+  toolCallId: z.string().min(1),
+  toolName: z.string().min(1),
+  content: z.string(),
+  error: z.boolean().optional(),
+}).meta({ ref: "ToolResultPart" })
+
+export const PartSchema = z
+  .discriminatedUnion("type", [TextPartSchema, ThinkingPartSchema, ToolCallPartSchema, ToolResultPartSchema])
+  .meta({ ref: "Part" })
 
 export const UserMessageSchema = z
   .object({
@@ -117,7 +146,7 @@ export const MessageSchema = z.union([UserMessageSchema, AssistantMessageSchema]
 export const MessageWithPartsSchema = z
   .object({
     info: MessageSchema,
-    parts: z.array(TextPartSchema),
+    parts: z.array(PartSchema),
   })
   .meta({ ref: "MessageWithParts" })
 
@@ -156,5 +185,9 @@ export const PromptInputSchema = z.object({
 export type SessionInfo = z.infer<typeof SessionSchema>
 export type MessageInfo = z.infer<typeof MessageSchema>
 export type MessageWithParts = z.infer<typeof MessageWithPartsSchema>
+export type Part = z.infer<typeof PartSchema>
 export type TextPart = z.infer<typeof TextPartSchema>
+export type ThinkingPart = z.infer<typeof ThinkingPartSchema>
+export type ToolCallPart = z.infer<typeof ToolCallPartSchema>
+export type ToolResultPart = z.infer<typeof ToolResultPartSchema>
 export type PromptInput = z.infer<typeof PromptInputSchema>

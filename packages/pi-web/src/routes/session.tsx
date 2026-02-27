@@ -1,9 +1,8 @@
-import { createClient } from "@piclaw/sdk"
+import { createClient, type MessageWithParts } from "@piclaw/sdk"
 import { useLocation, useNavigate, useParams } from "@solidjs/router"
-import { Show, createEffect, createSignal } from "solid-js"
+import { createEffect, createSignal } from "solid-js"
 import { createStore } from "solid-js/store"
 
-import type { ConversationMessage } from "@/components/conversation"
 import { Conversation } from "@/components/conversation"
 import { PromptInput } from "@/components/ui/prompt-input"
 
@@ -21,7 +20,7 @@ export default function SessionPage() {
   const sessionId = () => params.sessionId ?? ""
 
   const [state, setState] = createStore({
-    messages: [] as ConversationMessage[],
+    messages: [] as MessageWithParts[],
     status: "idle" as "idle" | "sending",
   })
   // Capture the nav state prompt once at mount time, then discard it.
@@ -29,17 +28,6 @@ export default function SessionPage() {
   const navPrompt = location.state?.prompt ?? ""
   const [initialPrompt, setInitialPrompt] = createSignal(navPrompt)
   const [loaded, setLoaded] = createSignal(false)
-
-  const createMessageId = () =>
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}`
-
-  const extractPartsText = (parts?: Array<{ text: string }>) =>
-    parts
-      ?.map((part) => part.text)
-      .join("\n")
-      .trim() ?? ""
 
   createEffect(() => {
     const currentSessionId = sessionId()
@@ -56,25 +44,34 @@ export default function SessionPage() {
     const response = await client.session.messages({ sessionID: currentSessionId })
     if (!response.data) return
 
-    const items = response.data
-      .map((message) => {
-        const text = extractPartsText(message.parts)
-        if (!text) return null
-        return {
-          id: message.info.id,
-          role: message.info.role,
-          text,
-        } as ConversationMessage
-      })
-      .filter((item): item is ConversationMessage => item !== null)
-
-    setState("messages", items)
+    setState("messages", response.data as MessageWithParts[])
   }
 
   const sendPrompt = async (value: string) => {
     if (state.status === "sending") return
     setState("status", "sending")
-    setState("messages", (messages) => [...messages, { id: createMessageId(), role: "user", text: value }])
+
+    // Optimistic user message
+    const tempUserMsg: MessageWithParts = {
+      info: {
+        id: crypto.randomUUID(),
+        sessionID: sessionId(),
+        role: "user",
+        time: { created: Date.now() },
+        agent: "pi",
+        model: { providerID: "unknown", modelID: "unknown" },
+      },
+      parts: [
+        {
+          id: crypto.randomUUID(),
+          sessionID: sessionId(),
+          messageID: crypto.randomUUID(),
+          type: "text",
+          text: value,
+        },
+      ],
+    }
+    setState("messages", (messages) => [...messages, tempUserMsg])
 
     const currentSessionId = sessionId()
     if (!currentSessionId) {
@@ -88,21 +85,37 @@ export default function SessionPage() {
     })
 
     if (response.error || !response.data) {
-      setState("messages", (messages) => [
-        ...messages,
-        { id: createMessageId(), role: "error", text: "Assistant response failed." },
-      ])
+      const errorMsg: MessageWithParts = {
+        info: {
+          id: crypto.randomUUID(),
+          sessionID: currentSessionId,
+          role: "assistant",
+          time: { created: Date.now() },
+          parentID: tempUserMsg.info.id,
+          modelID: "unknown",
+          providerID: "unknown",
+          mode: "server",
+          agent: "pi",
+          path: { cwd: ".", root: "." },
+          cost: 0,
+          tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        },
+        parts: [
+          {
+            id: crypto.randomUUID(),
+            sessionID: currentSessionId,
+            messageID: crypto.randomUUID(),
+            type: "text",
+            text: "Failed to get a response from the assistant.",
+          },
+        ],
+      }
+      setState("messages", (messages) => [...messages, errorMsg])
       setState("status", "idle")
       return
     }
 
-    const assistantText = extractPartsText(response.data.parts)
-    if (assistantText) {
-      setState("messages", (messages) => [
-        ...messages,
-        { id: createMessageId(), role: "assistant", text: assistantText },
-      ])
-    }
+    setState("messages", (messages) => [...messages, response.data as MessageWithParts])
     setState("status", "idle")
   }
 

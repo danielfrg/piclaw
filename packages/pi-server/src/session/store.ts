@@ -101,3 +101,11 @@ export function appendMessage(sessionID: string, message: MessageWithParts): voi
   record.messages.push(message)
   record.info.time.updated = Date.now()
 }
+
+/**
+ * Register a pre-built session record directly into the store.
+ * Used for dev seeding and testing.
+ */
+export function registerSession(record: SessionRecord): void {
+  sessions.set(record.info.id, record)
+}

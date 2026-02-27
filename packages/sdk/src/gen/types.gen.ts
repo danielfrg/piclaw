@@ -85,24 +85,86 @@ export type AssistantMessage = {
   finish?: string
 }
 
+export type TextPart = {
+  id: string
+  sessionID: string
+  messageID: string
+  synthetic?: boolean
+  ignored?: boolean
+  time?: {
+    start?: number
+    end?: number
+  }
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "text"
+  text: string
+}
+
+export type ThinkingPart = {
+  id: string
+  sessionID: string
+  messageID: string
+  synthetic?: boolean
+  ignored?: boolean
+  time?: {
+    start?: number
+    end?: number
+  }
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "thinking"
+  thinking: string
+}
+
+export type ToolCallPart = {
+  id: string
+  sessionID: string
+  messageID: string
+  synthetic?: boolean
+  ignored?: boolean
+  time?: {
+    start?: number
+    end?: number
+  }
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "tool-call"
+  toolCallId: string
+  toolName: string
+  args: {
+    [key: string]: unknown
+  }
+}
+
+export type ToolResultPart = {
+  id: string
+  sessionID: string
+  messageID: string
+  synthetic?: boolean
+  ignored?: boolean
+  time?: {
+    start?: number
+    end?: number
+  }
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "tool-result"
+  toolCallId: string
+  toolName: string
+  content: string
+  error?: boolean
+}
+
+export type Part = TextPart | ThinkingPart | ToolCallPart | ToolResultPart
+
 export type MessageWithParts = {
   info: UserMessage | AssistantMessage
-  parts: Array<{
-    id: string
-    sessionID: string
-    messageID: string
-    type: "text"
-    text: string
-    synthetic?: boolean
-    ignored?: boolean
-    time?: {
-      start?: number
-      end?: number
-    }
-    metadata?: {
-      [key: string]: unknown
-    }
-  }>
+  parts: Array<Part>
 }
 
 export type SessionListData = {

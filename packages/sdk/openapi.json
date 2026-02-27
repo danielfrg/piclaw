@@ -708,6 +708,269 @@
           "tokens"
         ]
       },
+      "TextPart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sessionID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "messageID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "synthetic": {
+            "type": "boolean"
+          },
+          "ignored": {
+            "type": "boolean"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "type": {
+            "type": "string",
+            "const": "text"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sessionID",
+          "messageID",
+          "type",
+          "text"
+        ]
+      },
+      "ThinkingPart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sessionID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "messageID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "synthetic": {
+            "type": "boolean"
+          },
+          "ignored": {
+            "type": "boolean"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "type": {
+            "type": "string",
+            "const": "thinking"
+          },
+          "thinking": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sessionID",
+          "messageID",
+          "type",
+          "thinking"
+        ]
+      },
+      "ToolCallPart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sessionID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "messageID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "synthetic": {
+            "type": "boolean"
+          },
+          "ignored": {
+            "type": "boolean"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "type": {
+            "type": "string",
+            "const": "tool-call"
+          },
+          "toolCallId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "toolName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "args": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "id",
+          "sessionID",
+          "messageID",
+          "type",
+          "toolCallId",
+          "toolName",
+          "args"
+        ]
+      },
+      "ToolResultPart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sessionID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "messageID": {
+            "type": "string",
+            "minLength": 1
+          },
+          "synthetic": {
+            "type": "boolean"
+          },
+          "ignored": {
+            "type": "boolean"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "type": {
+            "type": "string",
+            "const": "tool-result"
+          },
+          "toolCallId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "toolName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content": {
+            "type": "string"
+          },
+          "error": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "sessionID",
+          "messageID",
+          "type",
+          "toolCallId",
+          "toolName",
+          "content"
+        ]
+      },
+      "Part": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TextPart"
+          },
+          {
+            "$ref": "#/components/schemas/ThinkingPart"
+          },
+          {
+            "$ref": "#/components/schemas/ToolCallPart"
+          },
+          {
+            "$ref": "#/components/schemas/ToolResultPart"
+          }
+        ]
+      },
       "MessageWithParts": {
         "type": "object",
         "properties": {
@@ -724,59 +987,7 @@
           "parts": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "sessionID": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "messageID": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "type": {
-                  "type": "string",
-                  "const": "text"
-                },
-                "text": {
-                  "type": "string"
-                },
-                "synthetic": {
-                  "type": "boolean"
-                },
-                "ignored": {
-                  "type": "boolean"
-                },
-                "time": {
-                  "type": "object",
-                  "properties": {
-                    "start": {
-                      "type": "number"
-                    },
-                    "end": {
-                      "type": "number"
-                    }
-                  }
-                },
-                "metadata": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                }
-              },
-              "required": [
-                "id",
-                "sessionID",
-                "messageID",
-                "type",
-                "text"
-              ]
+              "$ref": "#/components/schemas/Part"
             }
           }
         },

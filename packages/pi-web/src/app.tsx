@@ -3,6 +3,7 @@ import type { ParentProps } from "solid-js"
 
 import HomePage from "@/routes/home"
 import SessionPage from "@/routes/session"
+import SessionsPage from "@/routes/sessions"
 
 function Layout(props: ParentProps) {
   return (
@@ -16,6 +17,9 @@ function Layout(props: ParentProps) {
             <A class="hover:text-gray-100 transition-colors" href="/">
               Home
             </A>
+            <A class="hover:text-gray-100 transition-colors" href="/sessions">
+              Sessions
+            </A>
           </nav>
         </div>
       </header>
@@ -28,6 +32,7 @@ function App() {
   return (
     <Route path="/" component={Layout}>
       <Route path="/" component={HomePage} />
+      <Route path="/sessions" component={SessionsPage} />
       <Route path="/session/:sessionId" component={SessionPage} />
     </Route>
   )
