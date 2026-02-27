@@ -327,11 +327,14 @@
         },
         "responses": {
           "200": {
-            "description": "Created message",
+            "description": "Messages produced by the agent",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MessageWithParts"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MessageWithParts"
+                  }
                 }
               }
             }

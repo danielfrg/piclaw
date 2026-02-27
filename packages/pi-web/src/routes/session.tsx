@@ -115,7 +115,8 @@ export default function SessionPage() {
       return
     }
 
-    setState("messages", (messages) => [...messages, response.data as MessageWithParts])
+    const newMessages = response.data as MessageWithParts[]
+    setState("messages", (messages) => [...messages, ...newMessages])
     setState("status", "idle")
   }
 

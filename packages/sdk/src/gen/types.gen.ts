@@ -356,9 +356,9 @@ export type SessionPromptErrors = {
 
 export type SessionPromptResponses = {
   /**
-   * Created message
+   * Messages produced by the agent
    */
-  200: MessageWithParts
+  200: Array<MessageWithParts>
 }
 
 export type SessionPromptResponse = SessionPromptResponses[keyof SessionPromptResponses]

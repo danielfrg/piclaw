@@ -8,7 +8,7 @@ type ConversationProps = {
 
 export function Conversation(props: ConversationProps) {
   return (
-    <div class="space-y-6">
+    <div class="flex flex-col gap-4">
       <Show
         when={props.messages.length > 0}
         fallback={
@@ -55,7 +55,7 @@ function UserBlock(props: { parts: Part[] }) {
 
 function AssistantBlock(props: { parts: Part[] }) {
   return (
-    <div class="space-y-3">
+    <div class="flex flex-col gap-2">
       <For each={props.parts}>
         {(part) => (
           <Switch>

@@ -10,8 +10,8 @@ import {
   SessionCreateInputSchema,
   SessionSchema,
   SessionUpdateInputSchema,
-  TextPartSchema,
   type MessageWithParts,
+  type Part,
 } from "@/schema"
 import {
   appendMessage,
@@ -246,10 +246,10 @@ export function SessionRoutes() {
         },
         responses: {
           200: {
-            description: "Created message",
+            description: "Messages produced by the agent",
             content: {
               "application/json": {
-                schema: asOpenApiSchema(MessageWithPartsSchema),
+                schema: asOpenApiSchema(z.array(MessageWithPartsSchema)),
               },
             },
           },
@@ -310,7 +310,7 @@ export function SessionRoutes() {
             // Mark the session as flushed so future assistant messages append incrementally.
             sessionManager.setSessionFile(sessionFile)
           }
-          return c.json(userMessage)
+          return c.json([userMessage])
         }
 
         setSessionStatus(sessionID, "running")
@@ -327,19 +327,31 @@ export function SessionRoutes() {
             },
             "session.prompt.model",
           )
+          // Snapshot message count before prompting so we can extract new messages after.
+          const messagesBefore = session.runtime.messages.length
           await session.runtime.prompt(promptText)
-          const assistantText = extractAssistantText(session)
-          const assistantMessage = buildAssistantMessage({
+
+          const modelRef = resolveModelRef(session)
+          const newAgentMessages = session.runtime.messages.slice(messagesBefore)
+          for (const msg of newAgentMessages) {
+            const m = msg as { role: string; content?: unknown }
+            const contentTypes = Array.isArray(m.content)
+              ? (m.content as Array<{ type: string }>).map((c) => c.type)
+              : typeof m.content
+            log.info({ role: m.role, contentTypes }, "session.prompt.agent_message")
+          }
+          const converted = convertAgentMessages(newAgentMessages, {
             sessionID,
             parentID: userMessageId,
             agent: agentName,
-            model: resolveModelRef(session),
-            text: assistantText,
+            model: modelRef,
             cwd: session.info.directory,
           })
-          appendMessage(sessionID, assistantMessage)
-          log.info({ sessionID, messageID: assistantMessage.info.id }, "session.prompt.completed")
-          return c.json(assistantMessage)
+          for (const msg of converted) {
+            appendMessage(sessionID, msg)
+          }
+          log.info({ sessionID, count: converted.length }, "session.prompt.completed")
+          return c.json(converted)
         } catch (error) {
           log.error({ sessionID, error }, "session.prompt.failed")
           return c.json({ error: errorMessage(error) }, 400)
@@ -422,11 +434,6 @@ function buildUserMessage(input: {
   text: string
 }): MessageWithParts {
   const now = Date.now()
-  const part = buildTextPart({
-    sessionID: input.sessionID,
-    messageID: input.messageID,
-    text: input.text,
-  })
 
   return {
     info: {
@@ -439,7 +446,15 @@ function buildUserMessage(input: {
       agent: input.agent,
       model: input.model,
     },
-    parts: [part],
+    parts: [
+      {
+        id: Id.create("part"),
+        sessionID: input.sessionID,
+        messageID: input.messageID,
+        type: "text",
+        text: input.text,
+      },
+    ],
   }
 }
 
@@ -455,91 +470,217 @@ function buildAgentUserMessage(text: string): {
   }
 }
 
-function buildAssistantMessage(input: {
+// ---------------------------------------------------------------------------
+// AgentMessage -> MessageWithParts conversion
+// ---------------------------------------------------------------------------
+
+type AgentMsg = { role: string; [key: string]: unknown }
+
+type ConvertCtx = {
   sessionID: string
   parentID: string
   agent: string
   model: z.infer<typeof ModelRefSchema>
-  text: string
   cwd: string
-}): MessageWithParts {
-  const now = Date.now()
-  const messageID = Id.create("message")
-  const part = buildTextPart({
-    sessionID: input.sessionID,
-    messageID,
-    text: input.text,
-  })
+}
 
-  return {
-    info: {
-      id: messageID,
-      sessionID: input.sessionID,
-      role: "assistant",
-      time: {
-        created: now,
-        completed: now,
-      },
-      parentID: input.parentID,
-      modelID: input.model.modelID,
-      providerID: input.model.providerID,
-      mode: "server",
-      agent: input.agent,
-      path: {
-        cwd: input.cwd,
-        root: input.cwd,
-      },
-      cost: 0,
-      tokens: {
-        total: 0,
-        input: 0,
-        output: 0,
-        reasoning: 0,
-        cache: {
-          read: 0,
-          write: 0,
+/**
+ * Convert a slice of AgentMessage[] (from pi-coding-agent) into our
+ * MessageWithParts[] with full part types (text, thinking, tool-call, tool-result).
+ */
+function convertAgentMessages(agentMessages: unknown[], ctx: ConvertCtx): MessageWithParts[] {
+  const results: MessageWithParts[] = []
+  let lastParentID = ctx.parentID
+
+  for (const raw of agentMessages) {
+    const msg = raw as AgentMsg
+    const role = msg.role as string
+
+    if (role === "assistant") {
+      const messageID = Id.create("message")
+      const parts = convertAssistantContent(msg.content, ctx.sessionID, messageID)
+      const usage = msg.usage as Record<string, unknown> | undefined
+
+      results.push({
+        info: {
+          id: messageID,
+          sessionID: ctx.sessionID,
+          role: "assistant",
+          time: {
+            created: (msg.timestamp as number) ?? Date.now(),
+            completed: Date.now(),
+          },
+          parentID: lastParentID,
+          modelID: (msg.model as string) ?? ctx.model.modelID,
+          providerID: (msg.provider as string) ?? ctx.model.providerID,
+          mode: "server",
+          agent: ctx.agent,
+          path: { cwd: ctx.cwd, root: ctx.cwd },
+          cost: extractCost(usage),
+          tokens: extractTokens(usage),
         },
-      },
-    },
-    parts: [part],
+        parts,
+      })
+      lastParentID = messageID
+    } else if (role === "toolResult") {
+      const messageID = Id.create("message")
+      const content = Array.isArray(msg.content)
+        ? (msg.content as Array<{ type: string; text?: string }>)
+            .filter((c) => c.type === "text" && c.text)
+            .map((c) => c.text!)
+            .join("\n")
+        : String(msg.content ?? "")
+
+      const part: Part = {
+        id: Id.create("part"),
+        sessionID: ctx.sessionID,
+        messageID,
+        type: "tool-result",
+        toolCallId: (msg.toolCallId as string) ?? "",
+        toolName: (msg.toolName as string) ?? "",
+        content,
+        error: (msg.isError as boolean) ?? false,
+      }
+
+      results.push({
+        info: {
+          id: messageID,
+          sessionID: ctx.sessionID,
+          role: "assistant",
+          time: { created: (msg.timestamp as number) ?? Date.now(), completed: Date.now() },
+          parentID: lastParentID,
+          modelID: ctx.model.modelID,
+          providerID: ctx.model.providerID,
+          mode: "server",
+          agent: ctx.agent,
+          path: { cwd: ctx.cwd, root: ctx.cwd },
+          cost: 0,
+          tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        },
+        parts: [part],
+      })
+      lastParentID = messageID
+    } else if (role === "bashExecution") {
+      const messageID = Id.create("message")
+      const cmd = (msg.command as string) ?? ""
+      const output = (msg.output as string) ?? ""
+      const exitCode = msg.exitCode as number | undefined
+
+      const callPart: Part = {
+        id: Id.create("part"),
+        sessionID: ctx.sessionID,
+        messageID,
+        type: "tool-call",
+        toolCallId: messageID,
+        toolName: "bash",
+        args: { command: cmd },
+      }
+
+      const resultPart: Part = {
+        id: Id.create("part"),
+        sessionID: ctx.sessionID,
+        messageID,
+        type: "tool-result",
+        toolCallId: messageID,
+        toolName: "bash",
+        content: output,
+        error: exitCode !== undefined && exitCode !== 0,
+      }
+
+      results.push({
+        info: {
+          id: messageID,
+          sessionID: ctx.sessionID,
+          role: "assistant",
+          time: { created: (msg.timestamp as number) ?? Date.now(), completed: Date.now() },
+          parentID: lastParentID,
+          modelID: ctx.model.modelID,
+          providerID: ctx.model.providerID,
+          mode: "server",
+          agent: ctx.agent,
+          path: { cwd: ctx.cwd, root: ctx.cwd },
+          cost: 0,
+          tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        },
+        parts: [callPart, resultPart],
+      })
+      lastParentID = messageID
+    }
+    // Skip user messages (already added optimistically) and other custom roles.
   }
+
+  return results
 }
 
-function buildTextPart(input: { sessionID: string; messageID: string; text: string }): z.infer<typeof TextPartSchema> {
-  return {
-    id: Id.create("part"),
-    sessionID: input.sessionID,
-    messageID: input.messageID,
-    type: "text",
-    text: input.text,
-  }
-}
+/**
+ * Convert an AssistantMessage's content array into Part[].
+ * Content items can be: { type: "text" }, { type: "thinking" }, { type: "toolCall" }.
+ */
+function convertAssistantContent(content: unknown, sessionID: string, messageID: string): Part[] {
+  if (!Array.isArray(content)) return []
 
-function extractAssistantText(session: SessionRecord): string {
-  const messages = session.runtime.messages
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const message = messages[i]
-    if (!message) continue
-    if ((message as { role?: string }).role === "assistant") {
-      return extractTextFromContent((message as { content: unknown }).content)
+  const parts: Part[] = []
+  for (const item of content) {
+    const c = item as { type: string; [key: string]: unknown }
+    if (c.type === "text" && typeof c.text === "string" && c.text.trim()) {
+      parts.push({
+        id: Id.create("part"),
+        sessionID,
+        messageID,
+        type: "text",
+        text: c.text,
+      })
+    } else if (c.type === "thinking" && typeof c.thinking === "string" && c.thinking.trim()) {
+      parts.push({
+        id: Id.create("part"),
+        sessionID,
+        messageID,
+        type: "thinking",
+        thinking: c.thinking,
+      })
+    } else if (c.type === "toolCall") {
+      parts.push({
+        id: Id.create("part"),
+        sessionID,
+        messageID,
+        type: "tool-call",
+        toolCallId: (c.id as string) ?? "",
+        toolName: (c.name as string) ?? "",
+        args: (c.arguments as Record<string, unknown>) ?? {},
+      })
     }
   }
-  return ""
+  return parts
 }
 
-function extractTextFromContent(content: unknown): string {
-  if (typeof content === "string") return content
-  if (!Array.isArray(content)) return ""
+function extractCost(usage: Record<string, unknown> | undefined): number {
+  if (!usage) return 0
+  const cost = usage.cost as Record<string, number> | undefined
+  return cost?.total ?? 0
+}
 
-  const textParts = content
-    .filter((part: unknown): part is { type: "text"; text: string } => {
-      if (!part || typeof part !== "object") return false
-      if (!("type" in part) || !("text" in part)) return false
-      return (part as { type: string }).type === "text" && typeof (part as { text: string }).text === "string"
-    })
-    .map((part) => part.text)
+type TokenInfo = {
+  total: number
+  input: number
+  output: number
+  reasoning: number
+  cache: { read: number; write: number }
+}
 
-  return textParts.join("\n")
+function extractTokens(usage: Record<string, unknown> | undefined): TokenInfo {
+  if (!usage) {
+    return { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
+  }
+  return {
+    total: (usage.totalTokens as number) ?? 0,
+    input: (usage.input as number) ?? 0,
+    output: (usage.output as number) ?? 0,
+    reasoning: 0,
+    cache: {
+      read: (usage.cacheRead as number) ?? 0,
+      write: (usage.cacheWrite as number) ?? 0,
+    },
+  }
 }
 
 function errorMessage(error: unknown): string {
