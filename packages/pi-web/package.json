@@ -11,6 +11,7 @@
   "dependencies": {
     "@danielfrg/solid-ui": "^0.0.4",
     "@piclaw/sdk": "workspace:*",
+    "@solidjs/router": "^0.15.4",
     "lucide-solid": "^0.575.0",
     "solid-js": "^1.9.10"
   },

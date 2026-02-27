@@ -7,56 +7,76 @@ import type { ComponentProps } from "solid-js"
 import { Button } from "@/components/ui/button"
 
 type PromptInputProps = ComponentProps<typeof Input> & {
+  variant?: "session" | "full"
   onSubmit?: (value: string) => void
+  placeholder?: string
+  compact?: boolean
 }
 
 export function PromptInput(props: PromptInputProps) {
-  const [local, rest] = splitProps(props, ["class", "onSubmit"])
+  const [local, rest] = splitProps(props, ["class", "onSubmit", "placeholder", "compact", "variant"])
   let textareaRef: HTMLTextAreaElement | undefined
-  const [isFocused, setIsFocused] = createSignal(false)
+  const [_, setIsFocused] = createSignal(false)
 
   const handleSubmit = (event: Event) => {
     event.preventDefault()
     const value = textareaRef?.value?.trim() ?? ""
     if (!value) return
     local.onSubmit?.(value)
-    if (textareaRef) textareaRef.value = ""
+    if (textareaRef) {
+      textareaRef.value = ""
+      textareaRef.style.height = "auto"
+    }
   }
 
   return (
-    <form
+    <div
       class={cn(
-        "w-full rounded-xl border bg-gray-900/60",
-        isFocused()
-          ? "border-gray-400 ring-[3px] ring-gray-400/30 ring-offset-0 ring-offset-gray-900"
-          : "border-gray-800/80",
-        "shadow-[0_24px_70px_-50px_rgba(0,0,0,0.85)]",
-        "transition-all duration-200",
+        "pointer-events-none overflow-hidden p-2 pb-0 backdrop-blur-lg",
+        local.compact ? "rounded-t-[20px]" : "rounded-[20px]",
         local.class,
       )}
-      onSubmit={handleSubmit}
     >
-      <Input {...rest} class="w-full gap-3">
-        <Input.TextArea
-          ref={textareaRef}
-          placeholder="How can I help my lord"
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          class={cn(
-            "min-h-[160px] w-full p-4 resize-none border-none ring-0 text-gray-100",
-            "placeholder:text-gray-500",
-            "focus:border-none focus:ring-0 focus:outline-none",
-            "focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none",
-          )}
-        />
-      </Input>
-      <div class="m-4 flex items-center">
-        <div class="ml-auto flex items-center gap-3">
-          <Button type="submit" class="gap-2">
-            <Send class="size-4" />
-          </Button>
+      <form
+        class={cn(
+          "pointer-events-auto relative flex w-full min-w-0 flex-col items-stretch gap-2",
+          "border border-white/10 bg-gray-900/95 px-3 pt-3 pb-3",
+          "text-gray-100 outline-8 outline-gray-800/50 outline-solid",
+          local.compact ? "rounded-t-xl border-b-0" : "rounded-xl",
+        )}
+        style={{
+          "box-shadow":
+            "rgba(0,0,0,0.1) 0px 80px 50px 0px, rgba(0,0,0,0.07) 0px 50px 30px 0px, rgba(0,0,0,0.06) 0px 30px 15px 0px, rgba(0,0,0,0.04) 0px 15px 8px, rgba(0,0,0,0.04) 0px 6px 4px, rgba(0,0,0,0.02) 0px 2px 2px",
+        }}
+        onSubmit={handleSubmit}
+      >
+        <div class="flex min-w-0 grow flex-row items-start">
+          <Input {...rest} class="w-full gap-3">
+            <Input.TextArea
+              ref={textareaRef}
+              autoResize
+              submitOnEnter
+              placeholder={local.placeholder ?? "How can I help my lord"}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              class={cn(
+                "min-h-[48px] max-h-[240px] overflow-y-auto",
+                "w-full resize-none border-none ring-0 bg-transparent text-base leading-6 text-gray-100",
+                "placeholder:text-gray-500/60",
+                "focus:border-none focus:ring-0 focus:outline-none",
+                "focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none",
+              )}
+            />
+          </Input>
         </div>
-      </div>
-    </form>
+        <div class="flex w-full min-w-0 flex-row-reverse justify-between">
+          <div class="flex shrink-0 items-center justify-center gap-2">
+            <Button type="submit" class="relative size-9 rounded-lg p-2">
+              <Send class="size-5" />
+            </Button>
+          </div>
+        </div>
+      </form>
+    </div>
   )
 }
