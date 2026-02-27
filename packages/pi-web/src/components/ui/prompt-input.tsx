@@ -2,7 +2,7 @@ import { Input } from "@danielfrg/solid-ui/input"
 import { cn } from "@danielfrg/solid-ui/utils"
 import { Send } from "lucide-solid"
 import { createSignal, splitProps } from "solid-js"
-import type { ComponentProps } from "solid-js"
+import type { ComponentProps, JSXElement } from "solid-js"
 
 import { Button } from "@/components/ui/button"
 
@@ -11,10 +11,11 @@ type PromptInputProps = ComponentProps<typeof Input> & {
   onSubmit?: (value: string) => void
   placeholder?: string
   compact?: boolean
+  toolbar?: JSXElement
 }
 
 export function PromptInput(props: PromptInputProps) {
-  const [local, rest] = splitProps(props, ["class", "onSubmit", "placeholder", "compact", "variant"])
+  const [local, rest] = splitProps(props, ["class", "onSubmit", "placeholder", "compact", "variant", "toolbar"])
   let textareaRef: HTMLTextAreaElement | undefined
   const [_, setIsFocused] = createSignal(false)
 
@@ -69,7 +70,8 @@ export function PromptInput(props: PromptInputProps) {
             />
           </Input>
         </div>
-        <div class="flex w-full min-w-0 flex-row-reverse justify-between">
+        <div class="flex w-full min-w-0 items-center justify-between">
+          <div class="min-w-0 flex-1">{local.toolbar}</div>
           <div class="flex shrink-0 items-center justify-center gap-2">
             <Button type="submit" class="relative size-9 rounded-lg p-2">
               <Send class="size-5" />

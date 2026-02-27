@@ -84,7 +84,7 @@ export function updateSession(sessionID: string, input: { title?: string; archiv
 export function deleteSession(sessionID: string): boolean {
   const record = sessions.get(sessionID)
   if (!record) return false
-  record.runtime.dispose()
+  record.runtime?.dispose()
   return sessions.delete(sessionID)
 }
 
@@ -100,12 +100,4 @@ export function appendMessage(sessionID: string, message: MessageWithParts): voi
   if (!record) return
   record.messages.push(message)
   record.info.time.updated = Date.now()
-}
-
-/**
- * Register a pre-built session record directly into the store.
- * Used for dev seeding and testing.
- */
-export function registerSession(record: SessionRecord): void {
-  sessions.set(record.info.id, record)
 }

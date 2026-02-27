@@ -4,6 +4,23 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {})
 }
 
+export type ModelInfo = {
+  provider: string
+  id: string
+  name: string
+  api: string
+  reasoning: boolean
+  input: Array<string>
+  cost: {
+    input: number
+    output: number
+    cacheRead: number
+    cacheWrite: number
+  }
+  contextWindow: number
+  maxTokens: number
+}
+
 export type Session = {
   id: string
   slug: string
@@ -166,6 +183,34 @@ export type MessageWithParts = {
   info: UserMessage | AssistantMessage
   parts: Array<Part>
 }
+
+export type SessionConfig = {
+  model: {
+    provider: string
+    id: string
+    name: string
+    reasoning: boolean
+  } | null
+  thinkingLevel: "off" | "minimal" | "low" | "medium" | "high" | "xhigh"
+  availableThinkingLevels: Array<"off" | "minimal" | "low" | "medium" | "high" | "xhigh">
+  supportsThinking: boolean
+}
+
+export type ModelListData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/api/model"
+}
+
+export type ModelListResponses = {
+  /**
+   * List of available models
+   */
+  200: Array<ModelInfo>
+}
+
+export type ModelListResponse = ModelListResponses[keyof ModelListResponses]
 
 export type SessionListData = {
   body?: never
@@ -387,3 +432,61 @@ export type SessionAbortResponses = {
 }
 
 export type SessionAbortResponse = SessionAbortResponses[keyof SessionAbortResponses]
+
+export type SessionConfigData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}/config"
+}
+
+export type SessionConfigErrors = {
+  /**
+   * Session not found
+   */
+  404: unknown
+}
+
+export type SessionConfigResponses = {
+  /**
+   * Session config
+   */
+  200: SessionConfig
+}
+
+export type SessionConfigResponse = SessionConfigResponses[keyof SessionConfigResponses]
+
+export type SessionUpdateConfigData = {
+  body?: {
+    provider?: string
+    modelId?: string
+    thinkingLevel?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh"
+  }
+  path: {
+    sessionID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}/config"
+}
+
+export type SessionUpdateConfigErrors = {
+  /**
+   * Bad request
+   */
+  400: unknown
+  /**
+   * Session not found
+   */
+  404: unknown
+}
+
+export type SessionUpdateConfigResponses = {
+  /**
+   * Updated session config
+   */
+  200: SessionConfig
+}
+
+export type SessionUpdateConfigResponse = SessionUpdateConfigResponses[keyof SessionUpdateConfigResponses]

@@ -1,13 +1,16 @@
-import { createClient, type MessageWithParts } from "@piclaw/sdk"
+import { createClient, type MessageWithParts, type ModelInfo, type SessionConfig } from "@piclaw/sdk"
 import { useLocation, useNavigate, useParams } from "@solidjs/router"
 import { createEffect, createSignal } from "solid-js"
 import { createStore } from "solid-js/store"
 
 import { Conversation } from "@/components/conversation"
+import { SessionConfigBar } from "@/components/session-config"
 import { PromptInput } from "@/components/ui/prompt-input"
 
 type LocationState = {
   prompt?: string
+  model?: { provider: string; id: string } | null
+  thinkingLevel?: SessionConfig["thinkingLevel"]
 }
 
 export default function SessionPage() {
@@ -23,11 +26,48 @@ export default function SessionPage() {
     messages: [] as MessageWithParts[],
     status: "idle" as "idle" | "sending",
   })
-  // Capture the nav state prompt once at mount time, then discard it.
-  // This prevents re-sending on refresh (location.state can persist across reloads).
+  const [config, setConfig] = createSignal<SessionConfig | undefined>()
+  const [models, setModels] = createSignal<ModelInfo[]>([])
+
+  // Capture nav state once at mount time, then discard it.
   const navPrompt = location.state?.prompt ?? ""
+  const navModel = location.state?.model ?? null
+  const navThinkingLevel = location.state?.thinkingLevel ?? null
   const [initialPrompt, setInitialPrompt] = createSignal(navPrompt)
   const [loaded, setLoaded] = createSignal(false)
+
+  const loadConfig = async () => {
+    const sid = sessionId()
+    if (!sid) return
+
+    const [configRes, modelsRes] = await Promise.all([client.session.config({ sessionID: sid }), client.model.list()])
+
+    if (configRes.data) setConfig(configRes.data as SessionConfig)
+    if (modelsRes.data) setModels(modelsRes.data as ModelInfo[])
+  }
+
+  const handleModelChange = async (provider: string, modelId: string) => {
+    const sid = sessionId()
+    if (!sid) return
+
+    const res = await client.session.updateConfig({
+      sessionID: sid,
+      provider,
+      modelId,
+    })
+    if (res.data) setConfig(res.data as SessionConfig)
+  }
+
+  const handleThinkingChange = async (level: SessionConfig["thinkingLevel"]) => {
+    const sid = sessionId()
+    if (!sid) return
+
+    const res = await client.session.updateConfig({
+      sessionID: sid,
+      thinkingLevel: level,
+    })
+    if (res.data) setConfig(res.data as SessionConfig)
+  }
 
   createEffect(() => {
     const currentSessionId = sessionId()
@@ -51,7 +91,6 @@ export default function SessionPage() {
     if (state.status === "sending") return
     setState("status", "sending")
 
-    // Optimistic user message
     const tempUserMsg: MessageWithParts = {
       info: {
         id: crypto.randomUUID(),
@@ -128,12 +167,23 @@ export default function SessionPage() {
     setLoaded(true)
 
     const run = async () => {
-      await loadMessages()
+      await Promise.all([loadMessages(), loadConfig()])
       const prompt = initialPrompt()
       if (!prompt) return
       setInitialPrompt("")
-      // Clear location state so refresh doesn't re-send the prompt.
       navigate(`/session/${currentSessionId}`, { replace: true })
+
+      // Apply model/thinking selections from home page before the first prompt.
+      if (navModel || navThinkingLevel) {
+        const res = await client.session.updateConfig({
+          sessionID: currentSessionId,
+          provider: navModel?.provider,
+          modelId: navModel?.id,
+          thinkingLevel: navThinkingLevel ?? undefined,
+        })
+        if (res.data) setConfig(res.data as SessionConfig)
+      }
+
       await sendPrompt(prompt)
     }
 
@@ -154,6 +204,14 @@ export default function SessionPage() {
             disabled={state.status === "sending"}
             placeholder="Send a message"
             compact
+            toolbar={
+              <SessionConfigBar
+                config={config()}
+                models={models()}
+                onModelChange={handleModelChange}
+                onThinkingChange={handleThinkingChange}
+              />
+            }
           />
         </div>
       </div>

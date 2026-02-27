@@ -3,8 +3,11 @@
 import { buildClientParams, type Client, type Options as Options2, type TDataShape } from "./client"
 import { client } from "./client.gen"
 import type {
+  ModelListResponses,
   SessionAbortErrors,
   SessionAbortResponses,
+  SessionConfigErrors,
+  SessionConfigResponses,
   SessionCreateResponses,
   SessionDeleteErrors,
   SessionDeleteResponses,
@@ -15,6 +18,8 @@ import type {
   SessionMessagesResponses,
   SessionPromptErrors,
   SessionPromptResponses,
+  SessionUpdateConfigErrors,
+  SessionUpdateConfigResponses,
   SessionUpdateErrors,
   SessionUpdateResponses,
 } from "./types.gen"
@@ -59,6 +64,20 @@ class HeyApiRegistry<T> {
 
   set(value: T, key?: string): void {
     this.instances.set(key ?? this.defaultKey, value)
+  }
+}
+
+export class Model extends HeyApiClient {
+  /**
+   * List available models
+   *
+   * List all models with configured authentication.
+   */
+  public list<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<ModelListResponses, unknown, ThrowOnError>({
+      url: "/api/model",
+      ...options,
+    })
   }
 }
 
@@ -289,6 +308,68 @@ export class Session extends HeyApiClient {
       ...params,
     })
   }
+
+  /**
+   * Get session config
+   *
+   * Get current model and thinking level for a session.
+   */
+  public config<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).get<SessionConfigResponses, SessionConfigErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/config",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update session config
+   *
+   * Change model and/or thinking level for a session.
+   */
+  public updateConfig<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      provider?: string
+      modelId?: string
+      thinkingLevel?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "body", key: "provider" },
+            { in: "body", key: "modelId" },
+            { in: "body", key: "thinkingLevel" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<
+      SessionUpdateConfigResponses,
+      SessionUpdateConfigErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/config",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
 }
 
 export class PiClient extends HeyApiClient {
@@ -297,6 +378,11 @@ export class PiClient extends HeyApiClient {
   constructor(args?: { client?: Client; key?: string }) {
     super(args)
     PiClient.__registry.set(this, args?.key)
+  }
+
+  private _model?: Model
+  get model(): Model {
+    return (this._model ??= new Model({ client: this.client }))
   }
 
   private _session?: Session

@@ -7,11 +7,14 @@ import {
   MessageWithPartsSchema,
   ModelRefSchema,
   PromptInputSchema,
+  SessionConfigSchema,
+  SessionConfigUpdateSchema,
   SessionCreateInputSchema,
   SessionSchema,
   SessionUpdateInputSchema,
   type MessageWithParts,
   type Part,
+  type SessionConfig,
 } from "@/schema"
 import {
   appendMessage,
@@ -333,13 +336,6 @@ export function SessionRoutes() {
 
           const modelRef = resolveModelRef(session)
           const newAgentMessages = session.runtime.messages.slice(messagesBefore)
-          for (const msg of newAgentMessages) {
-            const m = msg as { role: string; content?: unknown }
-            const contentTypes = Array.isArray(m.content)
-              ? (m.content as Array<{ type: string }>).map((c) => c.type)
-              : typeof m.content
-            log.info({ role: m.role, contentTypes }, "session.prompt.agent_message")
-          }
           const converted = convertAgentMessages(newAgentMessages, {
             sessionID,
             parentID: userMessageId,
@@ -390,6 +386,135 @@ export function SessionRoutes() {
         await session.runtime.abort()
         setSessionStatus(sessionID, "idle")
         return c.json(true)
+      },
+    )
+    .get(
+      "/:sessionID/config",
+      describeRoute({
+        summary: "Get session config",
+        description: "Get current model and thinking level for a session.",
+        operationId: "session.config",
+        responses: {
+          200: {
+            description: "Session config",
+            content: {
+              "application/json": {
+                schema: asOpenApiSchema(SessionConfigSchema),
+              },
+            },
+          },
+          404: {
+            description: "Session not found",
+          },
+        },
+      }),
+      validator("param", sessionParamSchema),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const session = getSession(sessionID)
+        if (!session) {
+          return c.json({ error: "Session not found" }, 404)
+        }
+        if (!session.runtime) {
+          return c.json({ error: "Session has no runtime (read-only)" }, 400)
+        }
+
+        const model = session.runtime.model
+        const config: SessionConfig = {
+          model: model
+            ? {
+                provider: model.provider,
+                id: model.id,
+                name: model.name,
+                reasoning: model.reasoning,
+              }
+            : null,
+          thinkingLevel: session.runtime.thinkingLevel,
+          availableThinkingLevels: session.runtime.getAvailableThinkingLevels(),
+          supportsThinking: session.runtime.supportsThinking(),
+        }
+
+        return c.json(config)
+      },
+    )
+    .patch(
+      "/:sessionID/config",
+      describeRoute({
+        summary: "Update session config",
+        description: "Change model and/or thinking level for a session.",
+        operationId: "session.updateConfig",
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: asOpenApiSchema(SessionConfigUpdateSchema),
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Updated session config",
+            content: {
+              "application/json": {
+                schema: asOpenApiSchema(SessionConfigSchema),
+              },
+            },
+          },
+          400: {
+            description: "Bad request",
+          },
+          404: {
+            description: "Session not found",
+          },
+        },
+      }),
+      validator("param", sessionParamSchema),
+      validator("json", SessionConfigUpdateSchema),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const input = c.req.valid("json")
+        const session = getSession(sessionID)
+        if (!session) {
+          return c.json({ error: "Session not found" }, 404)
+        }
+        if (!session.runtime) {
+          return c.json({ error: "Session has no runtime (read-only)" }, 400)
+        }
+
+        if (input.provider && input.modelId) {
+          const available = session.runtime.modelRegistry.getAvailable()
+          const model = available.find((m) => m.provider === input.provider && m.id === input.modelId)
+          if (!model) {
+            return c.json({ error: `Model not found: ${input.provider}/${input.modelId}` }, 400)
+          }
+          try {
+            await session.runtime.setModel(model)
+            log.info({ sessionID, provider: input.provider, modelId: input.modelId }, "session.config.model_changed")
+          } catch (error) {
+            return c.json({ error: errorMessage(error) }, 400)
+          }
+        }
+
+        if (input.thinkingLevel) {
+          session.runtime.setThinkingLevel(input.thinkingLevel)
+          log.info({ sessionID, thinkingLevel: input.thinkingLevel }, "session.config.thinking_changed")
+        }
+
+        const model = session.runtime.model
+        const config: SessionConfig = {
+          model: model
+            ? {
+                provider: model.provider,
+                id: model.id,
+                name: model.name,
+                reasoning: model.reasoning,
+              }
+            : null,
+          thinkingLevel: session.runtime.thinkingLevel,
+          availableThinkingLevels: session.runtime.getAvailableThinkingLevels(),
+          supportsThinking: session.runtime.supportsThinking(),
+        }
+
+        return c.json(config)
       },
     )
 }

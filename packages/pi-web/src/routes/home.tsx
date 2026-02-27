@@ -1,7 +1,8 @@
-import { createClient } from "@piclaw/sdk"
+import { createClient, type ModelInfo, type SessionConfig } from "@piclaw/sdk"
 import { useNavigate } from "@solidjs/router"
-import { createSignal } from "solid-js"
+import { createSignal, onMount } from "solid-js"
 
+import { SessionConfigBar } from "@/components/session-config"
 import { PromptInput } from "@/components/ui/prompt-input"
 
 export default function HomePage() {
@@ -10,6 +11,47 @@ export default function HomePage() {
   })
   const navigate = useNavigate()
   const [status, setStatus] = createSignal<"idle" | "sending">("idle")
+  const [models, setModels] = createSignal<ModelInfo[]>([])
+  const [selectedModel, setSelectedModel] = createSignal<{ provider: string; id: string } | null>(null)
+  const [thinkingLevel, setThinkingLevel] = createSignal<SessionConfig["thinkingLevel"]>("medium")
+
+  onMount(async () => {
+    const res = await client.model.list()
+    if (res.data) {
+      const list = res.data as ModelInfo[]
+      setModels(list)
+    }
+  })
+
+  // Build a synthetic SessionConfig from local selections so the config bar works.
+  const localConfig = (): SessionConfig | undefined => {
+    const list = models()
+    if (!list.length) return undefined
+
+    const sel = selectedModel()
+    const model = sel ? list.find((m) => m.provider === sel.provider && m.id === sel.id) : list[0]
+    if (!model) return undefined
+
+    return {
+      model: { provider: model.provider, id: model.id, name: model.name, reasoning: model.reasoning },
+      thinkingLevel: thinkingLevel(),
+      availableThinkingLevels: model.reasoning ? ["off", "minimal", "low", "medium", "high", "xhigh"] : ["off"],
+      supportsThinking: model.reasoning,
+    }
+  }
+
+  const handleModelChange = (provider: string, modelId: string) => {
+    setSelectedModel({ provider, id: modelId })
+    // If new model doesn't support thinking, reset to off
+    const model = models().find((m) => m.provider === provider && m.id === modelId)
+    if (model && !model.reasoning) {
+      setThinkingLevel("off")
+    }
+  }
+
+  const handleThinkingChange = (level: SessionConfig["thinkingLevel"]) => {
+    setThinkingLevel(level)
+  }
 
   const handlePromptSubmit = async (value: string) => {
     if (status() === "sending") return
@@ -22,7 +64,11 @@ export default function HomePage() {
     }
 
     navigate(`/session/${response.data.id}`, {
-      state: { prompt: value },
+      state: {
+        prompt: value,
+        model: selectedModel(),
+        thinkingLevel: thinkingLevel(),
+      },
     })
   }
 
@@ -33,6 +79,14 @@ export default function HomePage() {
           onSubmit={handlePromptSubmit}
           disabled={status() === "sending"}
           placeholder="Start a new conversation"
+          toolbar={
+            <SessionConfigBar
+              config={localConfig()}
+              models={models()}
+              onModelChange={handleModelChange}
+              onThinkingChange={handleThinkingChange}
+            />
+          }
         />
       </div>
     </main>

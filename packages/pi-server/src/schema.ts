@@ -182,6 +182,49 @@ export const PromptInputSchema = z.object({
   parts: z.array(TextPartInputSchema).min(1),
 })
 
+export const ThinkingLevelSchema = z.enum(["off", "minimal", "low", "medium", "high", "xhigh"])
+
+export const ModelInfoSchema = z
+  .object({
+    provider: z.string().min(1),
+    id: z.string().min(1),
+    name: z.string().min(1),
+    api: z.string().min(1),
+    reasoning: z.boolean(),
+    input: z.array(z.string()),
+    cost: z.object({
+      input: z.number(),
+      output: z.number(),
+      cacheRead: z.number(),
+      cacheWrite: z.number(),
+    }),
+    contextWindow: z.number(),
+    maxTokens: z.number(),
+  })
+  .meta({ ref: "ModelInfo" })
+
+export const SessionConfigSchema = z
+  .object({
+    model: z
+      .object({
+        provider: z.string().min(1),
+        id: z.string().min(1),
+        name: z.string().min(1),
+        reasoning: z.boolean(),
+      })
+      .nullable(),
+    thinkingLevel: ThinkingLevelSchema,
+    availableThinkingLevels: z.array(ThinkingLevelSchema),
+    supportsThinking: z.boolean(),
+  })
+  .meta({ ref: "SessionConfig" })
+
+export const SessionConfigUpdateSchema = z.object({
+  provider: z.string().min(1).optional(),
+  modelId: z.string().min(1).optional(),
+  thinkingLevel: ThinkingLevelSchema.optional(),
+})
+
 export type SessionInfo = z.infer<typeof SessionSchema>
 export type MessageInfo = z.infer<typeof MessageSchema>
 export type MessageWithParts = z.infer<typeof MessageWithPartsSchema>
@@ -190,4 +233,7 @@ export type TextPart = z.infer<typeof TextPartSchema>
 export type ThinkingPart = z.infer<typeof ThinkingPartSchema>
 export type ToolCallPart = z.infer<typeof ToolCallPartSchema>
 export type ToolResultPart = z.infer<typeof ToolResultPartSchema>
+export type ModelInfo = z.infer<typeof ModelInfoSchema>
+export type SessionConfig = z.infer<typeof SessionConfigSchema>
+export type ThinkingLevel = z.infer<typeof ThinkingLevelSchema>
 export type PromptInput = z.infer<typeof PromptInputSchema>
