@@ -1,3 +1,5 @@
+import { homedir } from "node:os"
+
 import type { AgentSession } from "@mariozechner/pi-coding-agent"
 
 import type { MessageWithParts, SessionInfo } from "@/schema"
@@ -25,13 +27,9 @@ export function getSession(sessionID: string): SessionRecord | undefined {
   return sessions.get(sessionID)
 }
 
-export async function createSession(input: {
-  title?: string
-  parentID?: string
-  directory?: string
-}): Promise<SessionRecord> {
-  const directory = input.directory ?? process.cwd()
-  const runtime = await createSessionRuntime(directory)
+export async function createSession(input: { title?: string; parentID?: string }): Promise<SessionRecord> {
+  const directory = homedir()
+  const runtime = await createSessionRuntime()
   const sessionFile = flushSession(runtime.sessionManager)
   if (sessionFile) {
     // Reload from disk to mark the session as flushed.
