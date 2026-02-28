@@ -61,10 +61,9 @@ function buildFullPrompt(): string {
   return `${base}\n\n# SOUL.md\n\n${soul}`
 }
 
-export async function createSessionRuntime(): Promise<AgentSession> {
+async function buildAgentSession(sessionManager: SessionManager): Promise<AgentSession> {
   const agentDir = getAgentDir()
-  const cwd = homedir()
-  const sessionManager = SessionManager.create(cwd)
+  const cwd = sessionManager.getCwd()
   const settingsManager = SettingsManager.create(cwd, agentDir)
 
   const resourceLoader = new DefaultResourceLoader({
@@ -86,3 +85,16 @@ export async function createSessionRuntime(): Promise<AgentSession> {
 
   return session
 }
+
+export async function createSessionRuntime(): Promise<AgentSession> {
+  const cwd = homedir()
+  const sessionManager = SessionManager.create(cwd)
+  return buildAgentSession(sessionManager)
+}
+
+export async function resumeSessionRuntime(sessionFilePath: string): Promise<AgentSession> {
+  const sessionManager = SessionManager.open(sessionFilePath)
+  return buildAgentSession(sessionManager)
+}
+
+export { SessionManager }

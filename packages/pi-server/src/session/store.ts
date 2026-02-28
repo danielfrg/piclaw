@@ -3,14 +3,19 @@ import { homedir } from "node:os"
 import type { AgentSession } from "@mariozechner/pi-coding-agent"
 
 import type { MessageWithParts, SessionInfo } from "@/schema"
+import { convertAgentMessages } from "@/session/convert"
 import { flushSession } from "@/session/persist"
-import { createSessionRuntime } from "@/session/runtime"
+import { createSessionRuntime, resumeSessionRuntime, SessionManager } from "@/session/runtime"
+import { log } from "@/util/log"
 
 export type SessionStatus = "idle" | "running"
 
 export type SessionRecord = {
   info: SessionInfo
-  runtime: AgentSession
+  /** null until the session runtime is hydrated on first access */
+  runtime: AgentSession | null
+  /** JSONL file path for resuming (set for persisted sessions) */
+  sessionFile: string | null
   messages: MessageWithParts[]
   status: SessionStatus
 }
@@ -27,13 +32,47 @@ export function getSession(sessionID: string): SessionRecord | undefined {
   return sessions.get(sessionID)
 }
 
+/**
+ * Hydrate the runtime for a session that was loaded from disk.
+ * Converts existing agent messages into MessageWithParts[].
+ */
+export async function hydrateSession(record: SessionRecord): Promise<void> {
+  if (record.runtime) return
+  if (!record.sessionFile) {
+    throw new Error(`Cannot hydrate session ${record.info.id}: no session file`)
+  }
+
+  log.info({ sessionID: record.info.id, path: record.sessionFile }, "session.hydrating")
+  const runtime = await resumeSessionRuntime(record.sessionFile)
+  record.runtime = runtime
+
+  // Convert existing agent messages into our format
+  if (runtime.messages.length > 0) {
+    const model = runtime.model
+    const converted = convertAgentMessages(
+      runtime.messages,
+      {
+        sessionID: record.info.id,
+        parentID: "",
+        agent: "pi",
+        model: {
+          providerID: model?.provider ?? "unknown",
+          modelID: model?.id ?? "unknown",
+        },
+        cwd: record.info.directory,
+      },
+      true,
+    )
+    record.messages = converted
+  }
+  log.info({ sessionID: record.info.id, messages: runtime.messages.length }, "session.hydrated")
+}
+
 export async function createSession(input: { title?: string; parentID?: string }): Promise<SessionRecord> {
   const directory = homedir()
   const runtime = await createSessionRuntime()
   const sessionFile = flushSession(runtime.sessionManager)
   if (sessionFile) {
-    // Reload from disk to mark the session as flushed.
-    // Without this, the first assistant message would bulk-write entries again.
     runtime.sessionManager.setSessionFile(sessionFile)
   }
   const now = Date.now()
@@ -56,6 +95,7 @@ export async function createSession(input: { title?: string; parentID?: string }
   const record: SessionRecord = {
     info,
     runtime,
+    sessionFile: sessionFile ?? null,
     messages: [],
     status: "idle",
   }
@@ -98,4 +138,46 @@ export function appendMessage(sessionID: string, message: MessageWithParts): voi
   if (!record) return
   record.messages.push(message)
   record.info.time.updated = Date.now()
+}
+
+/**
+ * Load all persisted sessions from disk as metadata-only records.
+ * Runtimes are hydrated lazily on first access.
+ */
+export async function loadPersistedSessions(): Promise<void> {
+  const cwd = homedir()
+  const piSessions = await SessionManager.list(cwd)
+  log.info({ count: piSessions.length, cwd }, "sessions.persisted.found")
+
+  for (const piSession of piSessions) {
+    const id = `ses_${piSession.id}`
+
+    // Skip if already loaded (e.g. created during this server run)
+    if (sessions.has(id)) continue
+
+    const info: SessionInfo = {
+      id,
+      slug: id,
+      projectID: "local",
+      directory: piSession.cwd || homedir(),
+      title: piSession.name || piSession.firstMessage.slice(0, 80) || "Untitled",
+      version: "0.1.0",
+      time: {
+        created: piSession.created.getTime(),
+        updated: piSession.modified.getTime(),
+      },
+    }
+
+    const record: SessionRecord = {
+      info,
+      runtime: null,
+      sessionFile: piSession.path,
+      messages: [],
+      status: "idle",
+    }
+
+    sessions.set(id, record)
+  }
+
+  log.info({ total: sessions.size }, "sessions.loaded")
 }
