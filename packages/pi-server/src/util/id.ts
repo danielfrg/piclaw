@@ -11,13 +11,11 @@ type PrefixKey = keyof typeof prefixes
 export const Id = {
   create(prefix?: PrefixKey) {
     if (!prefix) return crypto.randomUUID()
-    const resolved = prefix in prefixes ? prefixes[prefix] : prefix
-    if (prefix === "session") {
-      return `${resolved}_${crypto.randomUUID()}`
-    }
-    return `${resolved}_${crypto.randomUUID()}`
+    return `${prefixes[prefix]}_${crypto.randomUUID()}`
   },
   schema(prefix?: PrefixKey) {
-    return z.string().min(1)
+    if (!prefix) return z.string().min(1)
+    const tag = prefixes[prefix]
+    return z.string().startsWith(`${tag}_`)
   },
 }
