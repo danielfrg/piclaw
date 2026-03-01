@@ -1,4 +1,4 @@
-import { createClient, type MessageWithParts, type ModelInfo, type SessionConfig } from "@piclaw/sdk"
+import { createClient, type Capabilities, type MessageWithParts, type ModelInfo, type SessionConfig } from "@piclaw/sdk"
 import { useLocation, useNavigate, useParams } from "@solidjs/router"
 import { createEffect, createSignal } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -28,6 +28,7 @@ export default function SessionPage() {
   })
   const [config, setConfig] = createSignal<SessionConfig | undefined>()
   const [models, setModels] = createSignal<ModelInfo[]>([])
+  const [capabilities, setCapabilities] = createSignal<Capabilities | undefined>()
 
   // Capture nav state once at mount time, then discard it.
   const navPrompt = location.state?.prompt ?? ""
@@ -40,10 +41,15 @@ export default function SessionPage() {
     const sid = sessionId()
     if (!sid) return
 
-    const [configRes, modelsRes] = await Promise.all([client.session.config({ sessionID: sid }), client.model.list()])
+    const [configRes, modelsRes, capabilitiesRes] = await Promise.all([
+      client.session.config({ sessionID: sid }),
+      client.model.list(),
+      client.session.capabilities({ sessionID: sid }),
+    ])
 
     if (configRes.data) setConfig(configRes.data as SessionConfig)
     if (modelsRes.data) setModels(modelsRes.data as ModelInfo[])
+    if (capabilitiesRes.data) setCapabilities(capabilitiesRes.data as Capabilities)
   }
 
   const handleModelChange = async (provider: string, modelId: string) => {
@@ -208,6 +214,7 @@ export default function SessionPage() {
               <SessionConfigBar
                 config={config()}
                 models={models()}
+                capabilities={capabilities()}
                 onModelChange={handleModelChange}
                 onThinkingChange={handleThinkingChange}
               />

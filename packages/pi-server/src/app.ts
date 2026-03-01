@@ -4,6 +4,7 @@ import { serveStatic } from "hono/bun"
 import { cors } from "hono/cors"
 import { openAPIRouteHandler } from "hono-openapi"
 
+import { CapabilitiesRoutes } from "@/routes/capabilities"
 import { ModelRoutes } from "@/routes/model"
 import { SessionRoutes } from "@/routes/session"
 
@@ -19,6 +20,7 @@ export function createApp() {
     }),
   )
 
+  app.route("/api/capabilities", CapabilitiesRoutes())
   app.route("/api/model", ModelRoutes())
   app.route("/api/session", SessionRoutes())
 

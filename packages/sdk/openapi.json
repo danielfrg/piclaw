@@ -6,6 +6,25 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/capabilities": {
+      "get": {
+        "operationId": "capabilities.list",
+        "summary": "Get global capabilities",
+        "description": "Get loaded skills and available tools for the agent.",
+        "responses": {
+          "200": {
+            "description": "Agent capabilities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capabilities"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/model": {
       "get": {
         "operationId": "model.list",
@@ -513,10 +532,100 @@
           }
         ]
       }
+    },
+    "/api/session/{sessionID}/capabilities": {
+      "get": {
+        "operationId": "session.capabilities",
+        "summary": "Get session capabilities",
+        "description": "Get loaded skills and tools for a session.",
+        "responses": {
+          "200": {
+            "description": "Session capabilities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capabilities"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionID",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true
+          }
+        ]
+      }
     }
   },
   "components": {
     "schemas": {
+      "SkillInfo": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "source"
+        ]
+      },
+      "ToolInfoItem": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      },
+      "Capabilities": {
+        "type": "object",
+        "properties": {
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillInfo"
+            }
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolInfoItem"
+            }
+          }
+        },
+        "required": [
+          "skills",
+          "tools"
+        ]
+      },
       "ModelInfo": {
         "type": "object",
         "properties": {

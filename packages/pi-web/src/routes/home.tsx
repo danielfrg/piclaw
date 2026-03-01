@@ -1,4 +1,4 @@
-import { createClient, type ModelInfo, type SessionConfig } from "@piclaw/sdk"
+import { createClient, type Capabilities, type ModelInfo, type SessionConfig } from "@piclaw/sdk"
 import { useNavigate } from "@solidjs/router"
 import { createSignal, onMount } from "solid-js"
 
@@ -12,15 +12,15 @@ export default function HomePage() {
   const navigate = useNavigate()
   const [status, setStatus] = createSignal<"idle" | "sending">("idle")
   const [models, setModels] = createSignal<ModelInfo[]>([])
+  const [capabilities, setCapabilities] = createSignal<Capabilities | undefined>()
   const [selectedModel, setSelectedModel] = createSignal<{ provider: string; id: string } | null>(null)
   const [thinkingLevel, setThinkingLevel] = createSignal<SessionConfig["thinkingLevel"]>("medium")
 
   onMount(async () => {
-    const res = await client.model.list()
-    if (res.data) {
-      const list = res.data as ModelInfo[]
-      setModels(list)
-    }
+    const [modelsRes, capabilitiesRes] = await Promise.all([client.model.list(), client.capabilities.list()])
+
+    if (modelsRes.data) setModels(modelsRes.data as ModelInfo[])
+    if (capabilitiesRes.data) setCapabilities(capabilitiesRes.data as Capabilities)
   })
 
   // Build a synthetic SessionConfig from local selections so the config bar works.
@@ -83,6 +83,7 @@ export default function HomePage() {
             <SessionConfigBar
               config={localConfig()}
               models={models()}
+              capabilities={capabilities()}
               onModelChange={handleModelChange}
               onThinkingChange={handleThinkingChange}
             />

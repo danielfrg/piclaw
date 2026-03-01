@@ -4,6 +4,22 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {})
 }
 
+export type SkillInfo = {
+  name: string
+  description: string
+  source: string
+}
+
+export type ToolInfoItem = {
+  name: string
+  description: string
+}
+
+export type Capabilities = {
+  skills: Array<SkillInfo>
+  tools: Array<ToolInfoItem>
+}
+
 export type ModelInfo = {
   provider: string
   id: string
@@ -195,6 +211,22 @@ export type SessionConfig = {
   availableThinkingLevels: Array<"off" | "minimal" | "low" | "medium" | "high" | "xhigh">
   supportsThinking: boolean
 }
+
+export type CapabilitiesListData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/api/capabilities"
+}
+
+export type CapabilitiesListResponses = {
+  /**
+   * Agent capabilities
+   */
+  200: Capabilities
+}
+
+export type CapabilitiesListResponse = CapabilitiesListResponses[keyof CapabilitiesListResponses]
 
 export type ModelListData = {
   body?: never
@@ -490,3 +522,28 @@ export type SessionUpdateConfigResponses = {
 }
 
 export type SessionUpdateConfigResponse = SessionUpdateConfigResponses[keyof SessionUpdateConfigResponses]
+
+export type SessionCapabilitiesData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}/capabilities"
+}
+
+export type SessionCapabilitiesErrors = {
+  /**
+   * Session not found
+   */
+  404: unknown
+}
+
+export type SessionCapabilitiesResponses = {
+  /**
+   * Session capabilities
+   */
+  200: Capabilities
+}
+
+export type SessionCapabilitiesResponse = SessionCapabilitiesResponses[keyof SessionCapabilitiesResponses]

@@ -4,6 +4,7 @@ import type { OpenAPIV3_1 } from "openapi-types"
 import z from "zod"
 
 import {
+  CapabilitiesSchema,
   MessageWithPartsSchema,
   ModelRefSchema,
   PromptInputSchema,
@@ -12,6 +13,7 @@ import {
   SessionCreateInputSchema,
   SessionSchema,
   SessionUpdateInputSchema,
+  type Capabilities,
   type MessageWithParts,
   type SessionConfig,
 } from "@/schema"
@@ -524,6 +526,53 @@ export function SessionRoutes() {
         }
 
         return c.json(config)
+      },
+    )
+    .get(
+      "/:sessionID/capabilities",
+      describeRoute({
+        summary: "Get session capabilities",
+        description: "Get loaded skills and tools for a session.",
+        operationId: "session.capabilities",
+        responses: {
+          200: {
+            description: "Session capabilities",
+            content: {
+              "application/json": {
+                schema: asOpenApiSchema(CapabilitiesSchema),
+              },
+            },
+          },
+          404: {
+            description: "Session not found",
+          },
+        },
+      }),
+      validator("param", sessionParamSchema),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const session = getSession(sessionID)
+        if (!session) {
+          return c.json({ error: "Session not found" }, 404)
+        }
+
+        const runtime = await requireRuntime(session)
+        const { skills } = runtime.resourceLoader.getSkills()
+        const allTools = runtime.getAllTools()
+
+        const capabilities: Capabilities = {
+          skills: skills.map((s) => ({
+            name: s.name,
+            description: s.description,
+            source: s.source,
+          })),
+          tools: allTools.map((t) => ({
+            name: t.name,
+            description: t.description,
+          })),
+        }
+
+        return c.json(capabilities)
       },
     )
 }

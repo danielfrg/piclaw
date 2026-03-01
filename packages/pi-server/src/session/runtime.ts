@@ -97,4 +97,44 @@ export async function resumeSessionRuntime(sessionFilePath: string): Promise<Age
   return buildAgentSession(sessionManager)
 }
 
+/**
+ * Get global capabilities (skills + tools) without creating a session.
+ * Cached after first call since skills/tools don't change at runtime.
+ */
+let _cachedCapabilities:
+  | { skills: { name: string; description: string; source: string }[]; tools: { name: string; description: string }[] }
+  | undefined
+
+export async function getGlobalCapabilities() {
+  if (_cachedCapabilities) return _cachedCapabilities
+
+  const cwd = homedir()
+  const agentDir = getAgentDir()
+  const settingsManager = SettingsManager.create(cwd, agentDir)
+
+  const resourceLoader = new DefaultResourceLoader({
+    cwd,
+    agentDir,
+    settingsManager,
+    noExtensions: true,
+    noPromptTemplates: true,
+    noThemes: true,
+  })
+  await resourceLoader.reload()
+
+  const { skills } = resourceLoader.getSkills()
+  const tools = createCodingTools(cwd)
+
+  _cachedCapabilities = {
+    skills: skills.map((s) => ({ name: s.name, description: s.description, source: s.source })),
+    tools: tools.map((t) => ({ name: t.name, description: t.description })),
+  }
+
+  log.info(
+    { skills: _cachedCapabilities.skills.length, tools: _cachedCapabilities.tools.length },
+    "capabilities.loaded",
+  )
+  return _cachedCapabilities
+}
+
 export { SessionManager }

@@ -3,9 +3,12 @@
 import { buildClientParams, type Client, type Options as Options2, type TDataShape } from "./client"
 import { client } from "./client.gen"
 import type {
+  CapabilitiesListResponses,
   ModelListResponses,
   SessionAbortErrors,
   SessionAbortResponses,
+  SessionCapabilitiesErrors,
+  SessionCapabilitiesResponses,
   SessionConfigErrors,
   SessionConfigResponses,
   SessionCreateResponses,
@@ -64,6 +67,20 @@ class HeyApiRegistry<T> {
 
   set(value: T, key?: string): void {
     this.instances.set(key ?? this.defaultKey, value)
+  }
+}
+
+export class Capabilities extends HeyApiClient {
+  /**
+   * Get global capabilities
+   *
+   * Get loaded skills and available tools for the agent.
+   */
+  public list<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<CapabilitiesListResponses, unknown, ThrowOnError>({
+      url: "/api/capabilities",
+      ...options,
+    })
   }
 }
 
@@ -370,6 +387,25 @@ export class Session extends HeyApiClient {
       },
     })
   }
+
+  /**
+   * Get session capabilities
+   *
+   * Get loaded skills and tools for a session.
+   */
+  public capabilities<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).get<SessionCapabilitiesResponses, SessionCapabilitiesErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/capabilities",
+      ...options,
+      ...params,
+    })
+  }
 }
 
 export class PiClient extends HeyApiClient {
@@ -378,6 +414,11 @@ export class PiClient extends HeyApiClient {
   constructor(args?: { client?: Client; key?: string }) {
     super(args)
     PiClient.__registry.set(this, args?.key)
+  }
+
+  private _capabilities?: Capabilities
+  get capabilities(): Capabilities {
+    return (this._capabilities ??= new Capabilities({ client: this.client }))
   }
 
   private _model?: Model

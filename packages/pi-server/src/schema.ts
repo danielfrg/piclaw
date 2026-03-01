@@ -235,5 +235,30 @@ export type ToolCallPart = z.infer<typeof ToolCallPartSchema>
 export type ToolResultPart = z.infer<typeof ToolResultPartSchema>
 export type ModelInfo = z.infer<typeof ModelInfoSchema>
 export type SessionConfig = z.infer<typeof SessionConfigSchema>
+export const SkillInfoSchema = z
+  .object({
+    name: z.string().min(1),
+    description: z.string(),
+    source: z.string(),
+  })
+  .meta({ ref: "SkillInfo" })
+
+export const ToolInfoSchema = z
+  .object({
+    name: z.string().min(1),
+    description: z.string(),
+  })
+  .meta({ ref: "ToolInfoItem" })
+
+export const CapabilitiesSchema = z
+  .object({
+    skills: z.array(SkillInfoSchema),
+    tools: z.array(ToolInfoSchema),
+  })
+  .meta({ ref: "Capabilities" })
+
 export type ThinkingLevel = z.infer<typeof ThinkingLevelSchema>
 export type PromptInput = z.infer<typeof PromptInputSchema>
+export type SkillInfoItem = z.infer<typeof SkillInfoSchema>
+export type ToolInfoItem = z.infer<typeof ToolInfoSchema>
+export type Capabilities = z.infer<typeof CapabilitiesSchema>
