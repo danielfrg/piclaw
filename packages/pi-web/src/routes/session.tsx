@@ -266,13 +266,11 @@ export default function SessionPage() {
         })
         break
       }
-      case "tool-call-start": {
-        if (evt.toolCallId) {
-          setState("messages", idx, "parts", (parts) => [
-            ...parts,
-            makePart(sid, msgId, { type: "tool-call", toolCallId: evt.toolCallId, toolName: evt.toolName, args: {} }),
-          ])
-        }
+      case "tool-call-end": {
+        setState("messages", idx, "parts", (parts) => [
+          ...parts,
+          makePart(sid, msgId, { type: "tool-call", toolCallId: evt.toolCallId, toolName: evt.toolName, args: {} }),
+        ])
         break
       }
       case "tool-exec-end": {

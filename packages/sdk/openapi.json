@@ -1465,12 +1465,12 @@
           "delta"
         ]
       },
-      "StreamToolCallStart": {
+      "StreamToolCallEnd": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
-            "const": "tool-call-start"
+            "const": "tool-call-end"
           },
           "messageID": {
             "type": "string"
@@ -1650,7 +1650,7 @@
             "$ref": "#/components/schemas/StreamThinkingDelta"
           },
           {
-            "$ref": "#/components/schemas/StreamToolCallStart"
+            "$ref": "#/components/schemas/StreamToolCallEnd"
           },
           {
             "$ref": "#/components/schemas/StreamToolCallDelta"

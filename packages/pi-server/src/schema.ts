@@ -281,15 +281,15 @@ export const StreamThinkingDeltaSchema = z
   })
   .meta({ ref: "StreamThinkingDelta" })
 
-/** Tool call started */
-export const StreamToolCallStartSchema = z
+/** Tool call argument streaming finished; carries the resolved identity */
+export const StreamToolCallEndSchema = z
   .object({
-    type: z.literal("tool-call-start"),
+    type: z.literal("tool-call-end"),
     messageID: z.string(),
     toolCallId: z.string(),
     toolName: z.string(),
   })
-  .meta({ ref: "StreamToolCallStart" })
+  .meta({ ref: "StreamToolCallEnd" })
 
 /** Partial args delta for an in-progress tool call */
 export const StreamToolCallDeltaSchema = z
@@ -361,7 +361,7 @@ export const StreamEventSchema = z
   .discriminatedUnion("type", [
     StreamTextDeltaSchema,
     StreamThinkingDeltaSchema,
-    StreamToolCallStartSchema,
+    StreamToolCallEndSchema,
     StreamToolCallDeltaSchema,
     StreamToolExecStartSchema,
     StreamToolExecUpdateSchema,

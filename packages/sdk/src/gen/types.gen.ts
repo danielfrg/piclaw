@@ -214,8 +214,8 @@ export type StreamThinkingDelta = {
   delta: string
 }
 
-export type StreamToolCallStart = {
-  type: "tool-call-start"
+export type StreamToolCallEnd = {
+  type: "tool-call-end"
   messageID: string
   toolCallId: string
   toolName: string
@@ -270,7 +270,7 @@ export type StreamError = {
 export type StreamEvent =
   | StreamTextDelta
   | StreamThinkingDelta
-  | StreamToolCallStart
+  | StreamToolCallEnd
   | StreamToolCallDelta
   | StreamToolExecStart
   | StreamToolExecUpdate

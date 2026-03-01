@@ -856,12 +856,7 @@ function mapAgentEventToSSE(event: AgentSessionEvent, messageId: string): Stream
             delta: sub.delta,
           }
         case "toolcall_start":
-          return {
-            type: "tool-call-start",
-            messageID: messageId,
-            toolCallId: "",
-            toolName: "",
-          }
+          return null
         case "toolcall_delta":
           return {
             type: "tool-call-delta",
@@ -871,7 +866,7 @@ function mapAgentEventToSSE(event: AgentSessionEvent, messageId: string): Stream
           }
         case "toolcall_end":
           return {
-            type: "tool-call-start",
+            type: "tool-call-end",
             messageID: messageId,
             toolCallId: sub.toolCall.id,
             toolName: sub.toolCall.name,
