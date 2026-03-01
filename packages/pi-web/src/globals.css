@@ -33,3 +33,181 @@ body {
   min-height: 100vh;
   background: #1a1a1a;
 }
+
+/* ---------------------------------------------------------------------------
+ * Markdown styles for assistant messages
+ * --------------------------------------------------------------------------- */
+
+.markdown {
+  line-height: 1.7;
+  color: #e3e3e3;
+  font-size: 0.875rem;
+}
+
+/* Headings */
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  color: #f7f7f7;
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+.markdown h1 {
+  font-size: 1.5em;
+}
+.markdown h2 {
+  font-size: 1.25em;
+}
+.markdown h3 {
+  font-size: 1.1em;
+}
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  font-size: 1em;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+/* Paragraphs */
+.markdown p {
+  margin: 0.75em 0;
+}
+
+/* Links */
+.markdown a {
+  color: #3385ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markdown a:hover {
+  color: #66a3ff;
+}
+
+/* Bold / Italic */
+.markdown strong {
+  color: #f7f7f7;
+  font-weight: 600;
+}
+.markdown em {
+  font-style: italic;
+}
+
+/* Lists */
+.markdown ul,
+.markdown ol {
+  margin: 0.75em 0;
+  padding-left: 1.5em;
+}
+.markdown ul {
+  list-style: disc;
+}
+.markdown ol {
+  list-style: decimal;
+}
+.markdown li {
+  margin: 0.25em 0;
+}
+.markdown li > ul,
+.markdown li > ol {
+  margin: 0.25em 0;
+}
+
+/* Blockquotes */
+.markdown blockquote {
+  border-left: 3px solid #434343;
+  padding-left: 1em;
+  margin: 0.75em 0;
+  color: #a4a4a4;
+}
+
+/* Inline code */
+.markdown :not(pre) > code {
+  background: #2a2a2a;
+  border: 1px solid #383838;
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  font-size: 0.85em;
+  color: #e5c07b;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* Code blocks (shiki outputs pre > code with inline styles) */
+.markdown pre {
+  margin: 0.75em 0;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.markdown pre code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* Shiki pre blocks get background from the theme; add padding */
+.markdown .shiki {
+  padding: 1em;
+  border-radius: 8px;
+  border: 1px solid #383838;
+}
+
+/* Horizontal rules */
+.markdown hr {
+  border: none;
+  border-top: 1px solid #383838;
+  margin: 1.5em 0;
+}
+
+/* Tables */
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75em 0;
+  font-size: 0.8125rem;
+}
+.markdown thead th {
+  text-align: left;
+  font-weight: 600;
+  color: #c8c8c8;
+  border-bottom: 2px solid #434343;
+  padding: 0.5em 0.75em;
+}
+.markdown tbody td {
+  border-bottom: 1px solid #383838;
+  padding: 0.5em 0.75em;
+  color: #a4a4a4;
+}
+.markdown tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Images */
+.markdown img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 0.75em 0;
+}
+
+/* Task lists (GitHub-style checkboxes) */
+.markdown input[type="checkbox"] {
+  margin-right: 0.5em;
+}
+
+/* KaTeX overrides for dark theme */
+.markdown .katex {
+  color: #e3e3e3;
+}
+.markdown .katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+}

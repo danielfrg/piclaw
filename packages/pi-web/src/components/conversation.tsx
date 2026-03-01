@@ -1,6 +1,8 @@
 import type { MessageWithParts, Part } from "@piclaw/sdk"
 import { For, Show, Switch, Match } from "solid-js"
 
+import { Markdown } from "@/components/markdown"
+
 type ConversationProps = {
   messages: MessageWithParts[]
   thinking?: boolean
@@ -79,7 +81,7 @@ function AssistantBlock(props: { parts: Part[] }) {
 }
 
 function TextBlock(props: { text: string }) {
-  return <div class="text-sm leading-relaxed text-gray-200 whitespace-pre-wrap">{props.text}</div>
+  return <Markdown text={props.text} />
 }
 
 function ThinkingBlock(props: { thinking: string }) {
