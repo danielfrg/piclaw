@@ -49,7 +49,7 @@ function UserBlock(props: { parts: Part[] }) {
       .join("\n")
 
   return (
-    <div class="rounded-2xl bg-gray-800/60 px-5 py-4 text-sm leading-relaxed text-gray-100">
+    <div class="group relative rounded-xl border border-gray-700/50 bg-gray-700/50 px-5 py-4 text-sm leading-relaxed text-gray-100 break-words transition-colors">
       <div class="whitespace-pre-wrap">{text()}</div>
     </div>
   )

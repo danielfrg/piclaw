@@ -1,6 +1,7 @@
 import { createClient, type Capabilities, type MessageWithParts, type ModelInfo, type SessionConfig } from "@piclaw/sdk"
+import { Sparkles, Wrench } from "lucide-solid"
 import { useLocation, useNavigate, useParams } from "@solidjs/router"
-import { createEffect, createSignal } from "solid-js"
+import { createEffect, createSignal, For, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 
 import { Conversation } from "@/components/conversation"
@@ -20,7 +21,10 @@ export default function SessionPage() {
   const params = useParams()
   const location = useLocation<LocationState>()
   const navigate = useNavigate()
+
+  // sessionId is empty string on the home route ("/"), present on "/session/:sessionId"
   const sessionId = () => params.sessionId ?? ""
+  const hasSession = () => sessionId() !== ""
 
   const [state, setState] = createStore({
     messages: [] as MessageWithParts[],
@@ -30,6 +34,10 @@ export default function SessionPage() {
   const [models, setModels] = createSignal<ModelInfo[]>([])
   const [capabilities, setCapabilities] = createSignal<Capabilities | undefined>()
 
+  // Local model/thinking selection for pre-session state
+  const [selectedModel, setSelectedModel] = createSignal<{ provider: string; id: string } | null>(null)
+  const [thinkingLevel, setThinkingLevel] = createSignal<SessionConfig["thinkingLevel"]>("medium")
+
   // Capture nav state once at mount time, then discard it.
   const navPrompt = location.state?.prompt ?? ""
   const navModel = location.state?.model ?? null
@@ -37,70 +45,113 @@ export default function SessionPage() {
   const [initialPrompt, setInitialPrompt] = createSignal(navPrompt)
   const [loaded, setLoaded] = createSignal(false)
 
-  const loadConfig = async () => {
+  // Build a synthetic SessionConfig from local selections (pre-session)
+  const localConfig = (): SessionConfig | undefined => {
+    const list = models()
+    if (!list.length) return undefined
+
+    const sel = selectedModel()
+    const model = sel ? list.find((m) => m.provider === sel.provider && m.id === sel.id) : list[0]
+    if (!model) return undefined
+
+    return {
+      model: { provider: model.provider, id: model.id, name: model.name, reasoning: model.reasoning },
+      thinkingLevel: thinkingLevel(),
+      availableThinkingLevels: model.reasoning ? ["off", "minimal", "low", "medium", "high", "xhigh"] : ["off"],
+      supportsThinking: model.reasoning,
+    }
+  }
+
+  // Use server config when session exists, local config otherwise
+  const activeConfig = () => (hasSession() ? config() : localConfig())
+
+  // --- Data loading ---
+
+  const loadGlobalData = async () => {
+    const [modelsRes, capabilitiesRes] = await Promise.all([client.model.list(), client.capabilities.list()])
+
+    if (modelsRes.data) setModels(modelsRes.data as ModelInfo[])
+    if (capabilitiesRes.data) setCapabilities(capabilitiesRes.data as Capabilities)
+  }
+
+  const loadSessionData = async () => {
     const sid = sessionId()
     if (!sid) return
 
-    const [configRes, modelsRes, capabilitiesRes] = await Promise.all([
+    const [configRes, modelsRes, capabilitiesRes, messagesRes] = await Promise.all([
       client.session.config({ sessionID: sid }),
       client.model.list(),
       client.session.capabilities({ sessionID: sid }),
+      client.session.messages({ sessionID: sid }),
     ])
 
     if (configRes.data) setConfig(configRes.data as SessionConfig)
     if (modelsRes.data) setModels(modelsRes.data as ModelInfo[])
     if (capabilitiesRes.data) setCapabilities(capabilitiesRes.data as Capabilities)
+    if (messagesRes.data) setState("messages", messagesRes.data as MessageWithParts[])
   }
 
-  const handleModelChange = async (provider: string, modelId: string) => {
-    const sid = sessionId()
-    if (!sid) return
+  // --- Model/thinking handlers ---
 
-    const res = await client.session.updateConfig({
-      sessionID: sid,
-      provider,
-      modelId,
-    })
-    if (res.data) setConfig(res.data as SessionConfig)
+  const handleModelChange = async (provider: string, modelId: string) => {
+    if (hasSession()) {
+      const res = await client.session.updateConfig({
+        sessionID: sessionId(),
+        provider,
+        modelId,
+      })
+      if (res.data) setConfig(res.data as SessionConfig)
+    } else {
+      setSelectedModel({ provider, id: modelId })
+      const model = models().find((m) => m.provider === provider && m.id === modelId)
+      if (model && !model.reasoning) {
+        setThinkingLevel("off")
+      }
+    }
   }
 
   const handleThinkingChange = async (level: SessionConfig["thinkingLevel"]) => {
-    const sid = sessionId()
-    if (!sid) return
-
-    const res = await client.session.updateConfig({
-      sessionID: sid,
-      thinkingLevel: level,
-    })
-    if (res.data) setConfig(res.data as SessionConfig)
+    if (hasSession()) {
+      const res = await client.session.updateConfig({
+        sessionID: sessionId(),
+        thinkingLevel: level,
+      })
+      if (res.data) setConfig(res.data as SessionConfig)
+    } else {
+      setThinkingLevel(level)
+    }
   }
 
-  createEffect(() => {
-    const currentSessionId = sessionId()
-    if (!currentSessionId) return
-    setLoaded(false)
-    setState("messages", [])
-    setState("status", "idle")
-  })
-
-  const loadMessages = async () => {
-    const currentSessionId = sessionId()
-    if (!currentSessionId) return
-
-    const response = await client.session.messages({ sessionID: currentSessionId })
-    if (!response.data) return
-
-    setState("messages", response.data as MessageWithParts[])
-  }
+  // --- Prompt submission ---
 
   const sendPrompt = async (value: string) => {
     if (state.status === "sending") return
     setState("status", "sending")
 
+    // If no session yet, create one and navigate
+    if (!hasSession()) {
+      const response = await client.session.create()
+      if (!response.data) {
+        setState("status", "idle")
+        return
+      }
+
+      navigate(`/session/${response.data.id}`, {
+        state: {
+          prompt: value,
+          model: selectedModel(),
+          thinkingLevel: thinkingLevel(),
+        },
+      })
+      return
+    }
+
+    // Existing session: send prompt directly
+    const sid = sessionId()
     const tempUserMsg: MessageWithParts = {
       info: {
         id: crypto.randomUUID(),
-        sessionID: sessionId(),
+        sessionID: sid,
         role: "user",
         time: { created: Date.now() },
         agent: "pi",
@@ -109,7 +160,7 @@ export default function SessionPage() {
       parts: [
         {
           id: crypto.randomUUID(),
-          sessionID: sessionId(),
+          sessionID: sid,
           messageID: crypto.randomUUID(),
           type: "text",
           text: value,
@@ -118,14 +169,8 @@ export default function SessionPage() {
     }
     setState("messages", (messages) => [...messages, tempUserMsg])
 
-    const currentSessionId = sessionId()
-    if (!currentSessionId) {
-      setState("status", "idle")
-      return
-    }
-
     const response = await client.session.prompt({
-      sessionID: currentSessionId,
+      sessionID: sid,
       parts: [{ type: "text", text: value }],
     })
 
@@ -133,7 +178,7 @@ export default function SessionPage() {
       const errorMsg: MessageWithParts = {
         info: {
           id: crypto.randomUUID(),
-          sessionID: currentSessionId,
+          sessionID: sid,
           role: "assistant",
           time: { created: Date.now() },
           parentID: tempUserMsg.info.id,
@@ -148,7 +193,7 @@ export default function SessionPage() {
         parts: [
           {
             id: crypto.randomUUID(),
-            sessionID: currentSessionId,
+            sessionID: sid,
             messageID: crypto.randomUUID(),
             type: "text",
             text: "Failed to get a response from the assistant.",
@@ -165,6 +210,24 @@ export default function SessionPage() {
     setState("status", "idle")
   }
 
+  // --- Effects ---
+
+  // Load global data on mount (for home state, before a session exists)
+  createEffect(() => {
+    if (!hasSession()) {
+      void loadGlobalData()
+    }
+  })
+
+  // Load session data when sessionId changes
+  createEffect(() => {
+    const currentSessionId = sessionId()
+    if (!currentSessionId) return
+    setLoaded(false)
+    setState("messages", [])
+    setState("status", "idle")
+  })
+
   createEffect(() => {
     const currentSessionId = sessionId()
     if (!currentSessionId) return
@@ -173,13 +236,13 @@ export default function SessionPage() {
     setLoaded(true)
 
     const run = async () => {
-      await Promise.all([loadMessages(), loadConfig()])
+      await loadSessionData()
       const prompt = initialPrompt()
       if (!prompt) return
       setInitialPrompt("")
       navigate(`/session/${currentSessionId}`, { replace: true })
 
-      // Apply model/thinking selections from home page before the first prompt.
+      // Apply model/thinking selections from pre-session state
       if (navModel || navThinkingLevel) {
         const res = await client.session.updateConfig({
           sessionID: currentSessionId,
@@ -196,23 +259,99 @@ export default function SessionPage() {
     void run()
   })
 
+  // --- Auto-scroll on new messages ---
+
+  let prevMessageCount = 0
+
+  createEffect(() => {
+    const count = state.messages.length
+    const sending = state.status
+    if (count === 0 && sending === "idle") return
+
+    // Instant scroll for bulk loads (session hydration), smooth for incremental messages
+    const isBulkLoad = prevMessageCount === 0 && count > 1
+    const behavior = isBulkLoad ? "instant" : "smooth"
+    prevMessageCount = count
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior })
+    })
+  })
+
+  // --- Derived state ---
+
+  const skills = () => capabilities()?.skills ?? []
+  const tools = () => capabilities()?.tools ?? []
+  const showEmptyState = () => !hasSession() || state.messages.length === 0
+
   return (
     <div class="relative">
       <div class="px-4 md:px-10 pt-[40px] pb-[250px]">
-        <Conversation messages={state.messages} thinking={state.status === "sending"} />
+        <Show
+          when={!showEmptyState()}
+          fallback={
+            <div class="mx-auto w-full max-w-3xl">
+              <div class="flex flex-col items-center justify-center min-h-[50vh] gap-8">
+                <Show when={skills().length > 0}>
+                  <div class="w-full">
+                    <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-gray-600 mb-3">
+                      <Sparkles class="size-3.5" />
+                      Skills
+                    </div>
+                    <div class="flex flex-col gap-2">
+                      <For each={skills()}>
+                        {(skill) => (
+                          <div class="rounded-lg border border-gray-800 bg-gray-900/50 px-4 py-3">
+                            <div class="text-sm text-gray-200">{skill.name}</div>
+                            <Show when={skill.description}>
+                              <div class="text-xs text-gray-500 mt-1 line-clamp-2">{skill.description}</div>
+                            </Show>
+                          </div>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={tools().length > 0}>
+                  <div class="w-full">
+                    <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-gray-600 mb-3">
+                      <Wrench class="size-3.5" />
+                      Tools
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <For each={tools()}>
+                        {(tool) => (
+                          <span
+                            class="rounded-md border border-gray-800 bg-gray-900/50 px-3 py-1.5 text-xs text-gray-400"
+                            title={tool.description}
+                          >
+                            {tool.name}
+                          </span>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                </Show>
+              </div>
+            </div>
+          }
+        >
+          <Conversation messages={state.messages} thinking={state.status === "sending"} />
+        </Show>
       </div>
 
       <div class="fixed inset-x-0 bottom-0 pointer-events-none">
-        <div class="mx-auto w-full max-w-3xl px-4 md:px-10 pointer-events-auto">
+        <div class="mx-auto w-full max-w-3xl pointer-events-auto">
           <PromptInput
             variant="session"
             onSubmit={sendPrompt}
             disabled={state.status === "sending"}
-            placeholder="Send a message"
+            placeholder={hasSession() ? "Send a message" : "Start a new conversation"}
             compact
             toolbar={
               <SessionConfigBar
-                config={config()}
+                config={activeConfig()}
                 models={models()}
                 capabilities={capabilities()}
                 onModelChange={handleModelChange}
