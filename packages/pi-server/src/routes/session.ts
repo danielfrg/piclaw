@@ -310,7 +310,18 @@ export function SessionRoutes() {
           model: modelRef,
           text: promptText,
         })
+        // Derive title from first prompt on new sessions
+        const isFirstMessage = session.messages.length === 0
         appendMessage(sessionID, userMessage)
+
+        if (isFirstMessage) {
+          const firstLine = promptText.split("\n")[0] ?? promptText
+          const title = firstLine.trim().slice(0, 80) || "Untitled"
+          session.info.title = title
+          session.info.time.updated = Date.now()
+          runtime.sessionManager.appendSessionInfo(title)
+          log.info({ sessionID, title }, "session.title.derived")
+        }
 
         if (input.noReply) {
           log.info({ sessionID, messageID: userMessageId }, "session.prompt.no_reply")
