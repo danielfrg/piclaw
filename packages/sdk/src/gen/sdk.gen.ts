@@ -21,6 +21,8 @@ import type {
   SessionMessagesResponses,
   SessionPromptErrors,
   SessionPromptResponses,
+  SessionPromptStreamErrors,
+  SessionPromptStreamResponses,
   SessionUpdateConfigErrors,
   SessionUpdateConfigResponses,
   SessionUpdateErrors,
@@ -297,6 +299,69 @@ export class Session extends HeyApiClient {
     )
     return (options?.client ?? this.client).post<SessionPromptResponses, SessionPromptErrors, ThrowOnError>({
       url: "/api/session/{sessionID}/message",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Send message (streaming)
+   *
+   * Send a message and stream the assistant response as SSE events including text deltas, thinking deltas, tool calls, and tool execution updates.
+   */
+  public promptStream<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      messageID?: string
+      model?: {
+        providerID: string
+        modelID: string
+      }
+      agent?: string
+      noReply?: boolean
+      tools?: {
+        [key: string]: boolean
+      }
+      format?: unknown
+      system?: string
+      variant?: string
+      parts?: Array<{
+        type: "text"
+        text: string
+      }>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "body", key: "messageID" },
+            { in: "body", key: "model" },
+            { in: "body", key: "agent" },
+            { in: "body", key: "noReply" },
+            { in: "body", key: "tools" },
+            { in: "body", key: "format" },
+            { in: "body", key: "system" },
+            { in: "body", key: "variant" },
+            { in: "body", key: "parts" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).sse.post<
+      SessionPromptStreamResponses,
+      SessionPromptStreamErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/message/stream",
       ...options,
       ...params,
       headers: {

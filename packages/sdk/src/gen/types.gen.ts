@@ -200,6 +200,85 @@ export type MessageWithParts = {
   parts: Array<Part>
 }
 
+export type StreamTextDelta = {
+  type: "text-delta"
+  messageID: string
+  contentIndex: number
+  delta: string
+}
+
+export type StreamThinkingDelta = {
+  type: "thinking-delta"
+  messageID: string
+  contentIndex: number
+  delta: string
+}
+
+export type StreamToolCallStart = {
+  type: "tool-call-start"
+  messageID: string
+  toolCallId: string
+  toolName: string
+}
+
+export type StreamToolCallDelta = {
+  type: "tool-call-delta"
+  messageID: string
+  contentIndex: number
+  delta: string
+}
+
+export type StreamToolExecStart = {
+  type: "tool-exec-start"
+  toolCallId: string
+  toolName: string
+  args: {
+    [key: string]: unknown
+  }
+}
+
+export type StreamToolExecUpdate = {
+  type: "tool-exec-update"
+  toolCallId: string
+  toolName: string
+  result: unknown
+}
+
+export type StreamToolExecEnd = {
+  type: "tool-exec-end"
+  toolCallId: string
+  toolName: string
+  result: unknown
+  error: boolean
+}
+
+export type StreamFinal = {
+  type: "final"
+  messages: Array<MessageWithParts>
+}
+
+export type StreamAborted = {
+  type: "aborted"
+  reason?: string
+}
+
+export type StreamError = {
+  type: "error"
+  error: string
+}
+
+export type StreamEvent =
+  | StreamTextDelta
+  | StreamThinkingDelta
+  | StreamToolCallStart
+  | StreamToolCallDelta
+  | StreamToolExecStart
+  | StreamToolExecUpdate
+  | StreamToolExecEnd
+  | StreamFinal
+  | StreamAborted
+  | StreamError
+
 export type SessionConfig = {
   model: {
     provider: string
@@ -439,6 +518,57 @@ export type SessionPromptResponses = {
 }
 
 export type SessionPromptResponse = SessionPromptResponses[keyof SessionPromptResponses]
+
+export type SessionPromptStreamData = {
+  body?: {
+    messageID?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+    agent?: string
+    noReply?: boolean
+    tools?: {
+      [key: string]: boolean
+    }
+    format?: unknown
+    system?: string
+    variant?: string
+    parts: Array<{
+      type: "text"
+      text: string
+    }>
+  }
+  path: {
+    sessionID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}/message/stream"
+}
+
+export type SessionPromptStreamErrors = {
+  /**
+   * Bad request
+   */
+  400: unknown
+  /**
+   * Session not found
+   */
+  404: unknown
+  /**
+   * Session already running
+   */
+  409: unknown
+}
+
+export type SessionPromptStreamResponses = {
+  /**
+   * Event stream
+   */
+  200: StreamEvent
+}
+
+export type SessionPromptStreamResponse = SessionPromptStreamResponses[keyof SessionPromptStreamResponses]
 
 export type SessionAbortData = {
   body?: never

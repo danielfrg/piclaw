@@ -1,4 +1,12 @@
-import { createClient, type Capabilities, type MessageWithParts, type ModelInfo, type SessionConfig } from "@piclaw/sdk"
+import {
+  createClient,
+  type Capabilities,
+  type MessageWithParts,
+  type ModelInfo,
+  type Part,
+  type SessionConfig,
+  type StreamEvent,
+} from "@piclaw/sdk"
 import { Sparkles, Wrench } from "lucide-solid"
 import { useLocation, useNavigate, useParams } from "@solidjs/router"
 import { createEffect, createSignal, For, Show } from "solid-js"
@@ -146,7 +154,7 @@ export default function SessionPage() {
       return
     }
 
-    // Existing session: send prompt directly
+    // Existing session: send prompt via streaming SSE
     const sid = sessionId()
     const tempUserMsg: MessageWithParts = {
       info: {
@@ -169,46 +177,145 @@ export default function SessionPage() {
     }
     setState("messages", (messages) => [...messages, tempUserMsg])
 
-    const response = await client.session.prompt({
-      sessionID: sid,
-      parts: [{ type: "text", text: value }],
-    })
+    // Create a streaming assistant message placeholder
+    const streamMsgId = crypto.randomUUID()
+    const streamMsg: MessageWithParts = {
+      info: {
+        id: streamMsgId,
+        sessionID: sid,
+        role: "assistant",
+        time: { created: Date.now() },
+        parentID: tempUserMsg.info.id,
+        modelID: "unknown",
+        providerID: "unknown",
+        mode: "server",
+        agent: "pi",
+        path: { cwd: ".", root: "." },
+        cost: 0,
+        tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+      },
+      parts: [],
+    }
+    setState("messages", (messages) => [...messages, streamMsg])
 
-    if (response.error || !response.data) {
-      const errorMsg: MessageWithParts = {
-        info: {
-          id: crypto.randomUUID(),
+    // Index of the streaming message in the store
+    const streamIdx = () => state.messages.length - 1
+
+    try {
+      const result = await client.session.promptStream(
+        {
           sessionID: sid,
-          role: "assistant",
-          time: { created: Date.now() },
-          parentID: tempUserMsg.info.id,
-          modelID: "unknown",
-          providerID: "unknown",
-          mode: "server",
-          agent: "pi",
-          path: { cwd: ".", root: "." },
-          cost: 0,
-          tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          parts: [{ type: "text", text: value }],
         },
-        parts: [
-          {
-            id: crypto.randomUUID(),
-            sessionID: sid,
-            messageID: crypto.randomUUID(),
-            type: "text",
-            text: "Failed to get a response from the assistant.",
-          },
-        ],
+        { sseMaxRetryAttempts: 1 },
+      )
+
+      for await (const event of result.stream) {
+        const evt = event as StreamEvent
+        processStreamEvent(evt, sid, streamMsgId, streamIdx())
       }
-      setState("messages", (messages) => [...messages, errorMsg])
-      setState("status", "idle")
-      return
+    } catch (error) {
+      // If streaming fails entirely, append an error text part
+      const idx = streamIdx()
+      setState("messages", idx, "parts", (parts) => [
+        ...parts,
+        makePart(sid, streamMsgId, { type: "text", text: "Failed to get a response from the assistant." }),
+      ])
     }
 
-    const newMessages = response.data as MessageWithParts[]
-    setState("messages", (messages) => [...messages, ...newMessages])
     setState("status", "idle")
   }
+
+  /** Process a single SSE stream event and update the streaming message in-place */
+  const processStreamEvent = (evt: StreamEvent, sid: string, msgId: string, idx: number) => {
+    switch (evt.type) {
+      case "text-delta": {
+        setState("messages", idx, "parts", (parts) => {
+          // Find or create a text part for this content
+          const existing = parts.find(
+            (p): p is Part & { type: "text" } =>
+              p.type === "text" && (p.metadata?.contentIndex as number | undefined) === evt.contentIndex,
+          )
+          if (existing) {
+            return parts.map((p) => (p === existing ? { ...existing, text: existing.text + evt.delta } : p))
+          }
+          return [
+            ...parts,
+            makePart(sid, msgId, { type: "text", text: evt.delta, metadata: { contentIndex: evt.contentIndex } }),
+          ]
+        })
+        break
+      }
+      case "thinking-delta": {
+        setState("messages", idx, "parts", (parts) => {
+          const existing = parts.find(
+            (p): p is Part & { type: "thinking" } =>
+              p.type === "thinking" && (p.metadata?.contentIndex as number | undefined) === evt.contentIndex,
+          )
+          if (existing) {
+            return parts.map((p) => (p === existing ? { ...existing, thinking: existing.thinking + evt.delta } : p))
+          }
+          return [
+            ...parts,
+            makePart(sid, msgId, {
+              type: "thinking",
+              thinking: evt.delta,
+              metadata: { contentIndex: evt.contentIndex },
+            }),
+          ]
+        })
+        break
+      }
+      case "tool-call-start": {
+        if (evt.toolCallId) {
+          setState("messages", idx, "parts", (parts) => [
+            ...parts,
+            makePart(sid, msgId, { type: "tool-call", toolCallId: evt.toolCallId, toolName: evt.toolName, args: {} }),
+          ])
+        }
+        break
+      }
+      case "tool-exec-end": {
+        const content = typeof evt.result === "string" ? evt.result : JSON.stringify(evt.result ?? "", null, 2)
+        setState("messages", idx, "parts", (parts) => [
+          ...parts,
+          makePart(sid, msgId, {
+            type: "tool-result",
+            toolCallId: evt.toolCallId,
+            toolName: evt.toolName,
+            content,
+            error: evt.error,
+          }),
+        ])
+        break
+      }
+      case "final": {
+        // Replace the streaming message with the real converted messages
+        const finalMessages = evt.messages as MessageWithParts[]
+        setState("messages", (messages) => {
+          const without = messages.filter((m) => m.info.id !== msgId)
+          return [...without, ...finalMessages]
+        })
+        break
+      }
+      case "error": {
+        setState("messages", idx, "parts", (parts) => [
+          ...parts,
+          makePart(sid, msgId, { type: "text", text: `Error: ${evt.error}` }),
+        ])
+        break
+      }
+    }
+  }
+
+  /** Create a Part with auto-generated IDs */
+  const makePart = (sid: string, msgId: string, fields: Record<string, unknown>): Part =>
+    ({
+      id: crypto.randomUUID(),
+      sessionID: sid,
+      messageID: msgId,
+      ...fields,
+    }) as Part
 
   // --- Effects ---
 

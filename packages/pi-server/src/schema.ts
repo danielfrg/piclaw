@@ -257,6 +257,123 @@ export const CapabilitiesSchema = z
   })
   .meta({ ref: "Capabilities" })
 
+// ---------------------------------------------------------------------------
+// Stream event schemas (SSE)
+// ---------------------------------------------------------------------------
+
+/** Text delta from the assistant */
+export const StreamTextDeltaSchema = z
+  .object({
+    type: z.literal("text-delta"),
+    messageID: z.string(),
+    contentIndex: z.number().int().nonnegative(),
+    delta: z.string(),
+  })
+  .meta({ ref: "StreamTextDelta" })
+
+/** Thinking delta from the assistant */
+export const StreamThinkingDeltaSchema = z
+  .object({
+    type: z.literal("thinking-delta"),
+    messageID: z.string(),
+    contentIndex: z.number().int().nonnegative(),
+    delta: z.string(),
+  })
+  .meta({ ref: "StreamThinkingDelta" })
+
+/** Tool call started */
+export const StreamToolCallStartSchema = z
+  .object({
+    type: z.literal("tool-call-start"),
+    messageID: z.string(),
+    toolCallId: z.string(),
+    toolName: z.string(),
+  })
+  .meta({ ref: "StreamToolCallStart" })
+
+/** Partial args delta for an in-progress tool call */
+export const StreamToolCallDeltaSchema = z
+  .object({
+    type: z.literal("tool-call-delta"),
+    messageID: z.string(),
+    contentIndex: z.number().int().nonnegative(),
+    delta: z.string(),
+  })
+  .meta({ ref: "StreamToolCallDelta" })
+
+/** Tool execution started */
+export const StreamToolExecStartSchema = z
+  .object({
+    type: z.literal("tool-exec-start"),
+    toolCallId: z.string(),
+    toolName: z.string(),
+    args: z.record(z.string(), z.unknown()),
+  })
+  .meta({ ref: "StreamToolExecStart" })
+
+/** Tool execution partial update */
+export const StreamToolExecUpdateSchema = z
+  .object({
+    type: z.literal("tool-exec-update"),
+    toolCallId: z.string(),
+    toolName: z.string(),
+    result: z.unknown(),
+  })
+  .meta({ ref: "StreamToolExecUpdate" })
+
+/** Tool execution ended */
+export const StreamToolExecEndSchema = z
+  .object({
+    type: z.literal("tool-exec-end"),
+    toolCallId: z.string(),
+    toolName: z.string(),
+    result: z.unknown(),
+    error: z.boolean(),
+  })
+  .meta({ ref: "StreamToolExecEnd" })
+
+/** All messages produced by the completed turn */
+export const StreamFinalSchema = z
+  .object({
+    type: z.literal("final"),
+    messages: z.array(MessageWithPartsSchema),
+  })
+  .meta({ ref: "StreamFinal" })
+
+/** Agent aborted */
+export const StreamAbortedSchema = z
+  .object({
+    type: z.literal("aborted"),
+    reason: z.string().optional(),
+  })
+  .meta({ ref: "StreamAborted" })
+
+/** Error during processing */
+export const StreamErrorSchema = z
+  .object({
+    type: z.literal("error"),
+    error: z.string(),
+  })
+  .meta({ ref: "StreamError" })
+
+/** Discriminated union of all stream events */
+export const StreamEventSchema = z
+  .discriminatedUnion("type", [
+    StreamTextDeltaSchema,
+    StreamThinkingDeltaSchema,
+    StreamToolCallStartSchema,
+    StreamToolCallDeltaSchema,
+    StreamToolExecStartSchema,
+    StreamToolExecUpdateSchema,
+    StreamToolExecEndSchema,
+    StreamFinalSchema,
+    StreamAbortedSchema,
+    StreamErrorSchema,
+  ])
+  .meta({ ref: "StreamEvent" })
+
+export type StreamEvent = z.infer<typeof StreamEventSchema>
+
 export type ThinkingLevel = z.infer<typeof ThinkingLevelSchema>
 export type PromptInput = z.infer<typeof PromptInputSchema>
 export type SkillInfoItem = z.infer<typeof SkillInfoSchema>

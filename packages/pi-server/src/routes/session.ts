@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { streamSSE } from "hono/streaming"
 import { describeRoute, resolver, validator } from "hono-openapi"
 import type { OpenAPIV3_1 } from "openapi-types"
 import z from "zod"
@@ -13,11 +14,13 @@ import {
   SessionCreateInputSchema,
   SessionSchema,
   SessionUpdateInputSchema,
+  StreamEventSchema,
   type Capabilities,
   type MessageWithParts,
   type SessionConfig,
+  type StreamEvent,
 } from "@/schema"
-import type { AgentSession } from "@mariozechner/pi-coding-agent"
+import type { AgentSession, AgentSessionEvent } from "@mariozechner/pi-coding-agent"
 
 import {
   appendMessage,
@@ -376,6 +379,157 @@ export function SessionRoutes() {
       },
     )
     .post(
+      "/:sessionID/message/stream",
+      describeRoute({
+        summary: "Send message (streaming)",
+        description:
+          "Send a message and stream the assistant response as SSE events including text deltas, thinking deltas, tool calls, and tool execution updates.",
+        operationId: "session.promptStream",
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: asOpenApiSchema(PromptInputSchema),
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Event stream",
+            content: {
+              "text/event-stream": {
+                schema: asOpenApiSchema(StreamEventSchema),
+              },
+            },
+          },
+          400: { description: "Bad request" },
+          404: { description: "Session not found" },
+          409: { description: "Session already running" },
+        },
+      }),
+      validator("param", sessionParamSchema),
+      validator("json", PromptInputSchema),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const input = c.req.valid("json")
+        const session = getSession(sessionID)
+        if (!session) {
+          return c.json({ error: "Session not found" }, 404)
+        }
+        if (session.status === "running") {
+          return c.json({ error: "Session already running" }, 409)
+        }
+
+        const promptText = extractPromptText(input)
+        if (!promptText) {
+          return c.json({ error: "Prompt text is required" }, 400)
+        }
+
+        const runtime = await requireRuntime(session)
+        const modelRef = resolveModelRef(runtime)
+        const userMessageId = input.messageID ?? Id.create("message")
+        const agentName = input.agent ?? "pi"
+        log.info({ sessionID, messageID: userMessageId, agent: agentName, model: modelRef }, "session.prompt.stream")
+        const userMessage = buildUserMessage({
+          sessionID,
+          messageID: userMessageId,
+          agent: agentName,
+          model: modelRef,
+          text: promptText,
+        })
+
+        const isFirstMessage = session.messages.length === 0
+        appendMessage(sessionID, userMessage)
+
+        if (isFirstMessage) {
+          const firstLine = promptText.split("\n")[0] ?? promptText
+          const title = firstLine.trim().slice(0, 80) || "Untitled"
+          session.info.title = title
+          session.info.time.updated = Date.now()
+          runtime.sessionManager.appendSessionInfo(title)
+          log.info({ sessionID, title }, "session.title.derived")
+        }
+
+        c.header("X-Accel-Buffering", "no")
+        c.header("X-Content-Type-Options", "nosniff")
+
+        return streamSSE(c, async (stream) => {
+          setSessionStatus(sessionID, "running")
+
+          // Track current message ID for delta events
+          let currentMessageId = ""
+
+          const unsubscribe = runtime.subscribe((event: AgentSessionEvent) => {
+            const sseEvent = mapAgentEventToSSE(event, currentMessageId)
+            if (!sseEvent) return
+
+            // Track the message ID from message_start events
+            if (event.type === "message_start" && event.message?.role === "assistant") {
+              currentMessageId = Id.create("message")
+            }
+
+            void stream.writeSSE({
+              event: sseEvent.type,
+              data: JSON.stringify(sseEvent),
+            })
+          })
+
+          // Heartbeat to keep connection alive
+          const heartbeat = setInterval(() => {
+            void stream.writeSSE({
+              event: "heartbeat",
+              data: "{}",
+            })
+          }, 10_000)
+
+          try {
+            if (input.model) {
+              await setSessionModel(runtime, input.model)
+            }
+
+            const messagesBefore = runtime.messages.length
+            await runtime.prompt(promptText)
+
+            const currentModelRef = resolveModelRef(runtime)
+            const newAgentMessages = runtime.messages.slice(messagesBefore)
+            const converted = convertAgentMessages(newAgentMessages, {
+              sessionID,
+              parentID: userMessageId,
+              agent: agentName,
+              model: currentModelRef,
+              cwd: session.info.directory,
+            })
+            for (const msg of converted) {
+              appendMessage(sessionID, msg)
+            }
+
+            const finalEvent: StreamEvent = {
+              type: "final",
+              messages: converted,
+            }
+            await stream.writeSSE({
+              event: "final",
+              data: JSON.stringify(finalEvent),
+            })
+            log.info({ sessionID, count: converted.length }, "session.prompt.stream.completed")
+          } catch (error) {
+            const errorEvent: StreamEvent = {
+              type: "error",
+              error: errorMessage(error),
+            }
+            await stream.writeSSE({
+              event: "error",
+              data: JSON.stringify(errorEvent),
+            })
+            log.error({ sessionID, error }, "session.prompt.stream.failed")
+          } finally {
+            clearInterval(heartbeat)
+            unsubscribe()
+            setSessionStatus(sessionID, "idle")
+          }
+        })
+      },
+    )
+    .post(
       "/:sessionID/abort",
       describeRoute({
         summary: "Abort session",
@@ -676,4 +830,79 @@ function buildAgentUserMessage(text: string): {
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   return "Unknown error"
+}
+
+/**
+ * Map an AgentSessionEvent to a StreamEvent for SSE.
+ * Returns null for events we don't stream (agent_start, turn_start, etc).
+ */
+function mapAgentEventToSSE(event: AgentSessionEvent, messageId: string): StreamEvent | null {
+  switch (event.type) {
+    case "message_update": {
+      const sub = event.assistantMessageEvent
+      switch (sub.type) {
+        case "text_delta":
+          return {
+            type: "text-delta",
+            messageID: messageId,
+            contentIndex: sub.contentIndex,
+            delta: sub.delta,
+          }
+        case "thinking_delta":
+          return {
+            type: "thinking-delta",
+            messageID: messageId,
+            contentIndex: sub.contentIndex,
+            delta: sub.delta,
+          }
+        case "toolcall_start":
+          return {
+            type: "tool-call-start",
+            messageID: messageId,
+            toolCallId: "",
+            toolName: "",
+          }
+        case "toolcall_delta":
+          return {
+            type: "tool-call-delta",
+            messageID: messageId,
+            contentIndex: sub.contentIndex,
+            delta: sub.delta,
+          }
+        case "toolcall_end":
+          return {
+            type: "tool-call-start",
+            messageID: messageId,
+            toolCallId: sub.toolCall.id,
+            toolName: sub.toolCall.name,
+          }
+        default:
+          return null
+      }
+    }
+    case "tool_execution_start":
+      return {
+        type: "tool-exec-start",
+        toolCallId: event.toolCallId,
+        toolName: event.toolName,
+        args: event.args as Record<string, unknown>,
+      }
+    case "tool_execution_update":
+      return {
+        type: "tool-exec-update",
+        toolCallId: event.toolCallId,
+        toolName: event.toolName,
+        result: event.partialResult,
+      }
+    case "tool_execution_end":
+      return {
+        type: "tool-exec-end",
+        toolCallId: event.toolCallId,
+        toolName: event.toolName,
+        result: event.result,
+        error: event.isError,
+      }
+    default:
+      return null
+  }
 }

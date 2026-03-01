@@ -403,6 +403,122 @@
         ]
       }
     },
+    "/api/session/{sessionID}/message/stream": {
+      "post": {
+        "operationId": "session.promptStream",
+        "summary": "Send message (streaming)",
+        "description": "Send a message and stream the assistant response as SSE events including text deltas, thinking deltas, tool calls, and tool execution updates.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messageID": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "model": {
+                    "type": "object",
+                    "properties": {
+                      "providerID": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "modelID": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "providerID",
+                      "modelID"
+                    ]
+                  },
+                  "agent": {
+                    "type": "string"
+                  },
+                  "noReply": {
+                    "type": "boolean"
+                  },
+                  "tools": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
+                  },
+                  "format": {},
+                  "system": {
+                    "type": "string"
+                  },
+                  "variant": {
+                    "type": "string"
+                  },
+                  "parts": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "text"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "text"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "parts"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event stream",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamEvent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "Session not found"
+          },
+          "409": {
+            "description": "Session already running"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionID",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true
+          }
+        ]
+      }
+    },
     "/api/session/{sessionID}/abort": {
       "post": {
         "operationId": "session.abort",
@@ -1295,6 +1411,268 @@
         "required": [
           "info",
           "parts"
+        ]
+      },
+      "StreamTextDelta": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "text-delta"
+          },
+          "messageID": {
+            "type": "string"
+          },
+          "contentIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "delta": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "messageID",
+          "contentIndex",
+          "delta"
+        ]
+      },
+      "StreamThinkingDelta": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "thinking-delta"
+          },
+          "messageID": {
+            "type": "string"
+          },
+          "contentIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "delta": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "messageID",
+          "contentIndex",
+          "delta"
+        ]
+      },
+      "StreamToolCallStart": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "tool-call-start"
+          },
+          "messageID": {
+            "type": "string"
+          },
+          "toolCallId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "messageID",
+          "toolCallId",
+          "toolName"
+        ]
+      },
+      "StreamToolCallDelta": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "tool-call-delta"
+          },
+          "messageID": {
+            "type": "string"
+          },
+          "contentIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "delta": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "messageID",
+          "contentIndex",
+          "delta"
+        ]
+      },
+      "StreamToolExecStart": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "tool-exec-start"
+          },
+          "toolCallId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "args": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "type",
+          "toolCallId",
+          "toolName",
+          "args"
+        ]
+      },
+      "StreamToolExecUpdate": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "tool-exec-update"
+          },
+          "toolCallId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "result": {}
+        },
+        "required": [
+          "type",
+          "toolCallId",
+          "toolName",
+          "result"
+        ]
+      },
+      "StreamToolExecEnd": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "tool-exec-end"
+          },
+          "toolCallId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "result": {},
+          "error": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "type",
+          "toolCallId",
+          "toolName",
+          "result",
+          "error"
+        ]
+      },
+      "StreamFinal": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "final"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageWithParts"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "messages"
+        ]
+      },
+      "StreamAborted": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "aborted"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "StreamError": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "error"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "error"
+        ]
+      },
+      "StreamEvent": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StreamTextDelta"
+          },
+          {
+            "$ref": "#/components/schemas/StreamThinkingDelta"
+          },
+          {
+            "$ref": "#/components/schemas/StreamToolCallStart"
+          },
+          {
+            "$ref": "#/components/schemas/StreamToolCallDelta"
+          },
+          {
+            "$ref": "#/components/schemas/StreamToolExecStart"
+          },
+          {
+            "$ref": "#/components/schemas/StreamToolExecUpdate"
+          },
+          {
+            "$ref": "#/components/schemas/StreamToolExecEnd"
+          },
+          {
+            "$ref": "#/components/schemas/StreamFinal"
+          },
+          {
+            "$ref": "#/components/schemas/StreamAborted"
+          },
+          {
+            "$ref": "#/components/schemas/StreamError"
+          }
         ]
       },
       "SessionConfig": {
