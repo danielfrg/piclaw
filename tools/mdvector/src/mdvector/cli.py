@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 
 _DEFAULT_MODEL = "google/embeddinggemma-300m"
-_DEFAULT_COLLECTION = "mdvector"
+_DEFAULT_QDRANT_URL = os.environ.get("MDVECTOR_QDRANT_URL", "http://localhost:6333")
+_DEFAULT_COLLECTION = os.environ.get("MDVECTOR_QDRANT_COLLECTION", "mdvector")
 
 
 def main() -> None:
@@ -35,8 +37,8 @@ def main() -> None:
     )
     sync_parser.add_argument(
         "--qdrant-url",
-        default="http://localhost:6333",
-        help="Qdrant server URL (default: http://localhost:6333)",
+        default=_DEFAULT_QDRANT_URL,
+        help=f"Qdrant server URL (default: {_DEFAULT_QDRANT_URL})",
     )
     sync_parser.add_argument(
         "--collection",
@@ -83,8 +85,8 @@ def main() -> None:
     )
     search_parser.add_argument(
         "--qdrant-url",
-        default="http://localhost:6333",
-        help="Qdrant server URL (default: http://localhost:6333)",
+        default=_DEFAULT_QDRANT_URL,
+        help=f"Qdrant server URL (default: {_DEFAULT_QDRANT_URL})",
     )
     search_parser.add_argument(
         "--collection",
@@ -207,14 +209,11 @@ def _run_search(args: argparse.Namespace) -> None:
         print("No results found.")
         return
 
-    for i, r in enumerate(results, 1):
-        print(f"\n--- {i}. {r.title or r.path} (score: {r.score:.4f}) ---")
-        print(f"    path: {r.path}")
-        # Show a preview: first 200 chars of content
+    for i, r in enumerate(results):
         preview = r.content[:200].replace("\n", " ")
         if len(r.content) > 200:
             preview += "..."
-        print(f"    {preview}")
+        print(f"{i+1}. {r.path} - score={r.score:.4f}\n    {preview}\n")
 
 
 def _run_download_model(args: argparse.Namespace) -> None:
