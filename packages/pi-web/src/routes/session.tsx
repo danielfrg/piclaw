@@ -226,6 +226,12 @@ export default function SessionPage() {
     setState("status", "idle")
   }
 
+  const abortSession = async () => {
+    const sid = sessionId()
+    if (!sid || state.status !== "sending") return
+    await client.session.abort({ sessionID: sid }).catch(() => {})
+  }
+
   /** Process a single SSE stream event and update the streaming message in-place */
   const processStreamEvent = (evt: StreamEvent, sid: string, msgId: string, idx: number) => {
     switch (evt.type) {
@@ -294,6 +300,9 @@ export default function SessionPage() {
           const without = messages.filter((m) => m.info.id !== msgId)
           return [...without, ...finalMessages]
         })
+        break
+      }
+      case "aborted": {
         break
       }
       case "error": {
@@ -450,8 +459,9 @@ export default function SessionPage() {
         <div class="mx-auto w-full max-w-3xl pointer-events-auto">
           <PromptInput
             variant="session"
+            status={state.status}
             onSubmit={sendPrompt}
-            disabled={state.status === "sending"}
+            onAbort={abortSession}
             placeholder={hasSession() ? "Send a message" : "Start a new conversation"}
             compact
             toolbar={
