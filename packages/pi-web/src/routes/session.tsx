@@ -237,17 +237,25 @@ export default function SessionPage() {
     switch (evt.type) {
       case "text-delta": {
         setState("messages", idx, "parts", (parts) => {
-          // Find or create a text part for this content
+          // Match on both messageID and contentIndex so a new agent turn
+          // (which resets contentIndex to 0) creates a fresh text part
+          // instead of appending to the previous turn's text.
           const existing = parts.find(
             (p): p is Part & { type: "text" } =>
-              p.type === "text" && (p.metadata?.contentIndex as number | undefined) === evt.contentIndex,
+              p.type === "text" &&
+              (p.metadata?.messageID as string | undefined) === evt.messageID &&
+              (p.metadata?.contentIndex as number | undefined) === evt.contentIndex,
           )
           if (existing) {
             return parts.map((p) => (p === existing ? { ...existing, text: existing.text + evt.delta } : p))
           }
           return [
             ...parts,
-            makePart(sid, msgId, { type: "text", text: evt.delta, metadata: { contentIndex: evt.contentIndex } }),
+            makePart(sid, msgId, {
+              type: "text",
+              text: evt.delta,
+              metadata: { messageID: evt.messageID, contentIndex: evt.contentIndex },
+            }),
           ]
         })
         break
@@ -256,7 +264,9 @@ export default function SessionPage() {
         setState("messages", idx, "parts", (parts) => {
           const existing = parts.find(
             (p): p is Part & { type: "thinking" } =>
-              p.type === "thinking" && (p.metadata?.contentIndex as number | undefined) === evt.contentIndex,
+              p.type === "thinking" &&
+              (p.metadata?.messageID as string | undefined) === evt.messageID &&
+              (p.metadata?.contentIndex as number | undefined) === evt.contentIndex,
           )
           if (existing) {
             return parts.map((p) => (p === existing ? { ...existing, thinking: existing.thinking + evt.delta } : p))
@@ -266,7 +276,7 @@ export default function SessionPage() {
             makePart(sid, msgId, {
               type: "thinking",
               thinking: evt.delta,
-              metadata: { contentIndex: evt.contentIndex },
+              metadata: { messageID: evt.messageID, contentIndex: evt.contentIndex },
             }),
           ]
         })
