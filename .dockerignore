@@ -1,0 +1,15 @@
+.git
+.gitignore
+.DS_Store
+.opencode
+.turbo
+**/.env
+**/.env.*
+**/node_modules
+**/.bun
+**/.cache
+**/.venv
+**/dist
+**/build
+**/coverage
+**/*.log

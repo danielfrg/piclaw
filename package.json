@@ -49,6 +49,7 @@
     "vscode-langservers-extracted": "^4.10.0"
   },
   "dependencies": {
+    "@danielfrg/solid-ui": "0.1.1",
     "typescript": "catalog:"
   },
   "repository": {

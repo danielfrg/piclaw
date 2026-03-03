@@ -318,7 +318,13 @@ export default function SessionPage() {
       case "error": {
         setState("messages", idx, "parts", (parts) => [
           ...parts,
-          makePart(sid, msgId, { type: "text", text: `Error: ${evt.error}` }),
+          makePart(sid, msgId, {
+            type: "tool-result",
+            toolCallId: crypto.randomUUID(),
+            toolName: "system",
+            content: evt.error,
+            error: true,
+          }),
         ])
         break
       }

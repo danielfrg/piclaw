@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@danielfrg/solid-ui": "^0.0.4",
+    "@danielfrg/solid-ui": "0.1.3",
     "@piclaw/sdk": "workspace:*",
     "@solidjs/router": "^0.15.4",
     "dompurify": "^3.3.1",
