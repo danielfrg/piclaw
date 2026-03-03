@@ -4,8 +4,7 @@ There are many AI agents, but this one is mine.
 
 A simple and useful personal AI agent based on pi, inspired by OpenClaw anc OpenCode.
 
-- `packages/agent` Agent code based on Pi
-- `packages/tui` TUI for interacting with the agent
-- `packages/server` Hono API server
-- `packages/sdk` TypeScript SDK for the API
-- `packages/web` Web application for interacting with the API
+- `packages/server`: A Pi Agent API server - Hono + Local Pi session storage
+  - OpenAPI completions endpoint for integrations with other tools
+- `packages/web`: A web UI for the API using the SDK - Vite + SolidJS
+- `packages/sdk`: Generated TypeScript SDK for the API

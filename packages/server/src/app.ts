@@ -6,6 +6,7 @@ import { openAPIRouteHandler } from "hono-openapi"
 
 import { CapabilitiesRoutes } from "@/routes/capabilities"
 import { ModelRoutes } from "@/routes/model"
+import { OpenAIRoutes } from "@/routes/openai"
 import { SessionRoutes } from "@/routes/session"
 
 export function createApp() {
@@ -22,6 +23,7 @@ export function createApp() {
 
   app.route("/api/capabilities", CapabilitiesRoutes())
   app.route("/api/model", ModelRoutes())
+  app.route("/api/openai", OpenAIRoutes())
   app.route("/api/session", SessionRoutes())
 
   app.get(

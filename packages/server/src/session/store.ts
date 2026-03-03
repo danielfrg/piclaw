@@ -22,6 +22,22 @@ export type SessionRecord = {
 
 const sessions = new Map<string, SessionRecord>()
 
+/**
+ * Map external alias keys (e.g. OpenAI `user` field) to internal session IDs.
+ * Used by the OpenAI-compatible endpoint to reuse sessions across requests.
+ */
+const aliases = new Map<string, string>()
+
+export function getSessionByAlias(alias: string): SessionRecord | undefined {
+  const sessionID = aliases.get(alias)
+  if (!sessionID) return undefined
+  return sessions.get(sessionID)
+}
+
+export function setSessionAlias(alias: string, sessionID: string): void {
+  aliases.set(alias, sessionID)
+}
+
 export function listSessions(): SessionInfo[] {
   return Array.from(sessions.values())
     .map((record) => record.info)
