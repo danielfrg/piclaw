@@ -35,8 +35,21 @@
         "@types/bun": "catalog:",
       },
     },
-    "packages/pi-server": {
-      "name": "@piclaw/pi-server",
+    "packages/sdk": {
+      "name": "@piclaw/sdk",
+      "dependencies": {
+        "@hey-api/client-fetch": "catalog:",
+        "@hey-api/openapi-ts": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+      },
+      "peerDependencies": {
+        "typescript": "catalog:",
+      },
+    },
+    "packages/server": {
+      "name": "@piclaw/server",
       "dependencies": {
         "@hono/standard-validator": "^0.2.2",
         "@mariozechner/pi-coding-agent": "^0.52.12",
@@ -58,8 +71,21 @@
         "@types/bun": "catalog:",
       },
     },
-    "packages/pi-web": {
-      "name": "pi-web",
+    "packages/tui": {
+      "name": "tui",
+      "dependencies": {
+        "@mariozechner/pi-tui": "^0.53.0",
+        "@piclaw/agent": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/web": {
+      "name": "web",
       "version": "0.0.0",
       "dependencies": {
         "@danielfrg/solid-ui": "^0.0.4",
@@ -83,32 +109,6 @@
         "typescript": "~5.9.3",
         "vite": "^8.0.0-beta.13",
         "vite-plugin-solid": "^2.11.10",
-      },
-    },
-    "packages/sdk": {
-      "name": "@piclaw/sdk",
-      "dependencies": {
-        "@hey-api/client-fetch": "catalog:",
-        "@hey-api/openapi-ts": "catalog:",
-      },
-      "devDependencies": {
-        "@types/bun": "catalog:",
-      },
-      "peerDependencies": {
-        "typescript": "catalog:",
-      },
-    },
-    "packages/tui": {
-      "name": "tui",
-      "dependencies": {
-        "@mariozechner/pi-tui": "^0.53.0",
-        "@piclaw/agent": "workspace:*",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
       },
     },
   },
@@ -439,9 +439,9 @@
 
     "@piclaw/agent": ["@piclaw/agent@workspace:packages/agent"],
 
-    "@piclaw/pi-server": ["@piclaw/pi-server@workspace:packages/pi-server"],
-
     "@piclaw/sdk": ["@piclaw/sdk@workspace:packages/sdk"],
+
+    "@piclaw/server": ["@piclaw/server@workspace:packages/server"],
 
     "@pinojs/redact": ["@pinojs/redact@0.4.0", "", {}, "sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg=="],
 
@@ -1177,8 +1177,6 @@
 
     "perfect-debounce": ["perfect-debounce@2.1.0", "", {}, "sha512-LjgdTytVFXeUgtHZr9WYViYSM/g8MkcTPYDlPa3cDqMirHjKiSZPYd6DoL7pK8AJQr+uWkQvCjHNdiMqsrJs+g=="],
 
-    "pi-web": ["pi-web@workspace:packages/pi-web"],
-
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 
     "picomatch": ["picomatch@4.0.3", "", {}, "sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q=="],
@@ -1424,6 +1422,8 @@
     "vscode-nls": ["vscode-nls@5.2.0", "", {}, "sha512-RAaHx7B14ZU04EU31pT+rKz2/zSl7xMsfIZuo8pd+KZO6PXtQmpevpq3vxvWNcrGbdmhM/rr5Uw5Mz+NBfhVng=="],
 
     "vscode-uri": ["vscode-uri@3.1.0", "", {}, "sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ=="],
+
+    "web": ["web@workspace:packages/web"],
 
     "web-streams-polyfill": ["web-streams-polyfill@3.3.3", "", {}, "sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw=="],
 

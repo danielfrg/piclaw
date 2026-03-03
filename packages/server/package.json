@@ -1,5 +1,5 @@
 {
-  "name": "@piclaw/pi-server",
+  "name": "@piclaw/server",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "generate": "bun run scripts/generate.ts",

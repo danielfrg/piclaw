@@ -26,7 +26,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../pi-server/dist/static",
+    outDir: "../server/dist/static",
     emptyOutDir: true,
   },
   server: {

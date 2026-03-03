@@ -70,7 +70,7 @@ export function createApp() {
           headers: response.headers,
         })
       } catch {
-        return c.text("Vite dev server not running. Start it with: cd packages/pi-web && bun run dev", 502)
+        return c.text("Vite dev server not running. Start it with: cd packages/web && bun run dev", 502)
       }
     })
   }

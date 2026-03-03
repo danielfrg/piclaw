@@ -23,7 +23,7 @@ describe("session create", () => {
     originalCwd = process.cwd()
     originalAgentDir = process.env.PI_CODING_AGENT_DIR
 
-    tempRoot = join(tmpdir(), `pi-server-test-${Date.now()}`)
+    tempRoot = join(tmpdir(), `server-test-${Date.now()}`)
     agentDir = join(tempRoot, "agent")
     projectDir = join(tempRoot, "project")
 

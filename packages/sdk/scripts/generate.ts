@@ -4,7 +4,7 @@ import { createClient } from "@hey-api/openapi-ts"
 
 // Generate OpenAPI spec from the server
 console.log("Generating OpenAPI spec...")
-await $`bun run generate > ../sdk/openapi.json`.cwd("../pi-server")
+await $`bun run generate > ../sdk/openapi.json`.cwd("../server")
 
 // Generate SDK from OpenAPI spec
 console.log("Generating SDK...")
