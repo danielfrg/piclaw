@@ -8,7 +8,6 @@
     "dev:web": "bun run --cwd packages/web dev",
     "build:sdk": "bun run --cwd packages/sdk build",
     "build:web": "bun run --cwd packages/web build",
-    "tui": "bun run --cwd packages/tui dev",
     "typecheck": "bun turbo typecheck",
     "db": "bun run --cwd packages/server db",
     "db:studio": "bun run --cwd packages/server db:studio",

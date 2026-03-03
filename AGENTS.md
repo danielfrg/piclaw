@@ -4,9 +4,7 @@ A simple personal AI agent based on pi, inspired by OpenClaw anc OpenCode.
 
 Packages:
 
-- `packages/agent`: Core logic using Pi (pi-agent-core) for model resolution, tool handling, and skills.
 - `packages/server`: Hono API uses Drizzle ORM with SQLite for session persistence.
-- `packages/tui`: Terminal UI for direct interaction with the agent.
 - `packages/web`: Solid.js SPA (proxied via server in dev).
 - `packages/sdk`: Generated TypeScript client from the API.
 - `tools/mdvector`: Python-based utility for syncing markdown notes to Qdrant.
@@ -62,13 +60,9 @@ Follow these strictly for the `packages/web` application:
 - **Derive everything**: Use functions or `createMemo` for dependent values.
 - **Stores**: Use `createStore` for nested objects or arrays to enable path-based reactivity. Prefer `createStore` over multiple signals for complex state.
 
-## Agent & Tools
+## Tool Calling
 
-- **Agent Creation**: Use `Agent.create()` which handles config loading and model resolution.
-- **Model Resolution**: Use `resolveModel` to handle provider/model mapping and overrides from `config.json`.
-- **Skills**: Skills are loaded from `XDG_CONFIG/piclaw/skills`. Use `loadSkills` to discover and validate them.
-- **Vector Search**: Semantic note search requires Qdrant. Configuration is handled via `PICLAW_QDRANT_URL` and `vectordb` in config.
-- **Tool Calling**: ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
+- ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
 
 ## Data & Persistence
 
@@ -86,8 +80,6 @@ Follow these strictly for the `packages/web` application:
 
 Project structure:
 
-- packages/agent: agent code
-- packages/tui: terminal user interface that uses the agent
 - packages/server: server code
 
 Sources for the different libraries that this project uses or is based on:
