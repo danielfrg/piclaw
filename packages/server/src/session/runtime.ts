@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs"
 import { homedir } from "node:os"
-import { dirname, join } from "node:path"
+import { basename, dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import {
@@ -97,12 +97,23 @@ export async function resumeSessionRuntime(sessionFilePath: string): Promise<Age
   return buildAgentSession(sessionManager)
 }
 
+/** Derive a display name from an extension file path. */
+export function extensionName(filepath: string): string {
+  const base = basename(filepath)
+  // Strip .ts/.js extension if present
+  return base.replace(/\.(ts|js)$/, "")
+}
+
 /**
- * Get global capabilities (skills + tools) without creating a session.
- * Cached after first call since skills/tools don't change at runtime.
+ * Get global capabilities (skills + tools + extensions) without creating a session.
+ * Cached after first call since capabilities don't change at runtime.
  */
 let _cachedCapabilities:
-  | { skills: { name: string; description: string; source: string }[]; tools: { name: string; description: string }[] }
+  | {
+      skills: { name: string; description: string; source: string }[]
+      tools: { name: string; description: string }[]
+      extensions: { name: string; path: string }[]
+    }
   | undefined
 
 export async function getGlobalCapabilities() {
@@ -116,22 +127,27 @@ export async function getGlobalCapabilities() {
     cwd,
     agentDir,
     settingsManager,
-    noExtensions: true,
     noPromptTemplates: true,
     noThemes: true,
   })
   await resourceLoader.reload()
 
   const { skills } = resourceLoader.getSkills()
+  const { extensions } = resourceLoader.getExtensions()
   const tools = createCodingTools(cwd)
 
   _cachedCapabilities = {
     skills: skills.map((s) => ({ name: s.name, description: s.description, source: s.source })),
     tools: tools.map((t) => ({ name: t.name, description: t.description })),
+    extensions: extensions.map((e) => ({ name: extensionName(e.path), path: e.path })),
   }
 
   log.info(
-    { skills: _cachedCapabilities.skills.length, tools: _cachedCapabilities.tools.length },
+    {
+      skills: _cachedCapabilities.skills.length,
+      tools: _cachedCapabilities.tools.length,
+      extensions: _cachedCapabilities.extensions.length,
+    },
     "capabilities.loaded",
   )
   return _cachedCapabilities

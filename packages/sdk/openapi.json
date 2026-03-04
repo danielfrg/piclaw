@@ -80,7 +80,7 @@
                 "properties": {
                   "parentID": {
                     "type": "string",
-                    "minLength": 1
+                    "pattern": "^ses_.*"
                   },
                   "title": {
                     "type": "string",
@@ -158,7 +158,7 @@
             "name": "sessionID",
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^ses_.*"
             },
             "required": true
           }
@@ -212,7 +212,7 @@
             "name": "sessionID",
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^ses_.*"
             },
             "required": true
           }
@@ -243,7 +243,7 @@
             "name": "sessionID",
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^ses_.*"
             },
             "required": true
           }
@@ -279,7 +279,7 @@
             "name": "sessionID",
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^ses_.*"
             },
             "required": true
           }
@@ -297,7 +297,7 @@
                 "properties": {
                   "messageID": {
                     "type": "string",
-                    "minLength": 1
+                    "pattern": "^msg_.*"
                   },
                   "model": {
                     "type": "object",
@@ -396,7 +396,7 @@
             "name": "sessionID",
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^ses_.*"
             },
             "required": true
           }
@@ -416,7 +416,7 @@
                 "properties": {
                   "messageID": {
                     "type": "string",
-                    "minLength": 1
+                    "pattern": "^msg_.*"
                   },
                   "model": {
                     "type": "object",
@@ -512,7 +512,7 @@
             "name": "sessionID",
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^ses_.*"
             },
             "required": true
           }
@@ -545,7 +545,7 @@
             "name": "sessionID",
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^ses_.*"
             },
             "required": true
           }
@@ -578,7 +578,7 @@
             "name": "sessionID",
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^ses_.*"
             },
             "required": true
           }
@@ -642,7 +642,7 @@
             "name": "sessionID",
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^ses_.*"
             },
             "required": true
           }
@@ -675,7 +675,7 @@
             "name": "sessionID",
             "schema": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^ses_.*"
             },
             "required": true
           }
@@ -721,6 +721,22 @@
           "description"
         ]
       },
+      "ExtensionInfo": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "path"
+        ]
+      },
       "Capabilities": {
         "type": "object",
         "properties": {
@@ -735,11 +751,18 @@
             "items": {
               "$ref": "#/components/schemas/ToolInfoItem"
             }
+          },
+          "extensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtensionInfo"
+            }
           }
         },
         "required": [
           "skills",
-          "tools"
+          "tools",
+          "extensions"
         ]
       },
       "ModelInfo": {
@@ -817,7 +840,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^ses_.*"
           },
           "slug": {
             "type": "string",
@@ -833,7 +856,7 @@
           },
           "parentID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^ses_.*"
           },
           "title": {
             "type": "string",
@@ -907,11 +930,11 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^msg_.*"
           },
           "sessionID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^ses_.*"
           },
           "role": {
             "type": "string",
@@ -995,11 +1018,11 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^msg_.*"
           },
           "sessionID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^ses_.*"
           },
           "role": {
             "type": "string",
@@ -1022,7 +1045,7 @@
           "error": {},
           "parentID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^msg_.*"
           },
           "modelID": {
             "type": "string",
@@ -1130,15 +1153,15 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^part_.*"
           },
           "sessionID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^ses_.*"
           },
           "messageID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^msg_.*"
           },
           "synthetic": {
             "type": "boolean"
@@ -1185,15 +1208,15 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^part_.*"
           },
           "sessionID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^ses_.*"
           },
           "messageID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^msg_.*"
           },
           "synthetic": {
             "type": "boolean"
@@ -1240,15 +1263,15 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^part_.*"
           },
           "sessionID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^ses_.*"
           },
           "messageID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^msg_.*"
           },
           "synthetic": {
             "type": "boolean"
@@ -1309,15 +1332,15 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^part_.*"
           },
           "sessionID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^ses_.*"
           },
           "messageID": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^msg_.*"
           },
           "synthetic": {
             "type": "boolean"

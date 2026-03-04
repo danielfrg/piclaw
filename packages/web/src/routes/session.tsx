@@ -7,7 +7,7 @@ import {
   type SessionConfig,
   type StreamEvent,
 } from "@piclaw/sdk"
-import { Sparkles, Wrench } from "lucide-solid"
+import { Puzzle, Sparkles, Wrench } from "lucide-solid"
 import { useLocation, useNavigate, useParams } from "@solidjs/router"
 import { createEffect, createSignal, For, Show } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -412,6 +412,7 @@ export default function SessionPage() {
 
   const skills = () => capabilities()?.skills ?? []
   const tools = () => capabilities()?.tools ?? []
+  const extensions = () => capabilities()?.extensions ?? []
   const showEmptyState = () => !hasSession() || state.messages.length === 0
 
   return (
@@ -457,6 +458,27 @@ export default function SessionPage() {
                             title={tool.description}
                           >
                             {tool.name}
+                          </span>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={extensions().length > 0}>
+                  <div class="w-full">
+                    <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-gray-600 mb-3">
+                      <Puzzle class="size-3.5" />
+                      Extensions
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <For each={extensions()}>
+                        {(ext) => (
+                          <span
+                            class="rounded-md border border-gray-800 bg-gray-900/50 px-3 py-1.5 text-xs text-gray-400"
+                            title={ext.path}
+                          >
+                            {ext.name}
                           </span>
                         )}
                       </For>

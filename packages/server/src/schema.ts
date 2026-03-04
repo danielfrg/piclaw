@@ -250,10 +250,18 @@ export const ToolInfoSchema = z
   })
   .meta({ ref: "ToolInfoItem" })
 
+export const ExtensionInfoSchema = z
+  .object({
+    name: z.string().min(1),
+    path: z.string(),
+  })
+  .meta({ ref: "ExtensionInfo" })
+
 export const CapabilitiesSchema = z
   .object({
     skills: z.array(SkillInfoSchema),
     tools: z.array(ToolInfoSchema),
+    extensions: z.array(ExtensionInfoSchema),
   })
   .meta({ ref: "Capabilities" })
 

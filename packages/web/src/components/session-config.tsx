@@ -1,7 +1,7 @@
 import type { Capabilities, ModelInfo, SessionConfig } from "@piclaw/sdk"
 import { Popover } from "@danielfrg/solid-ui/popover"
 import { ToggleGroup } from "@danielfrg/solid-ui/toggle-group"
-import { Blocks, Sparkles, Wrench } from "lucide-solid"
+import { Blocks, Puzzle, Sparkles, Wrench } from "lucide-solid"
 import { For, Show, createSignal } from "solid-js"
 
 type SessionConfigBarProps = {
@@ -31,7 +31,8 @@ export function SessionConfigBar(props: SessionConfigBarProps) {
 
   const skillCount = () => props.capabilities?.skills.length ?? 0
   const toolCount = () => props.capabilities?.tools.length ?? 0
-  const totalCount = () => skillCount() + toolCount()
+  const extensionCount = () => props.capabilities?.extensions.length ?? 0
+  const totalCount = () => skillCount() + toolCount() + extensionCount()
 
   return (
     <div class="flex items-center gap-3 text-xs text-gray-500">
@@ -121,7 +122,9 @@ export function SessionConfigBar(props: SessionConfigBarProps) {
           <Popover.Trigger class="flex items-center gap-1 rounded px-2 py-1 hover:bg-gray-800 hover:text-gray-300 transition-colors cursor-pointer">
             <Blocks class="size-3" />
             <span>
-              {toolCount()} tools{skillCount() > 0 ? `, ${skillCount()} skills` : ""}
+              {toolCount()} tools
+              {skillCount() > 0 ? `, ${skillCount()} skills` : ""}
+              {extensionCount() > 0 ? `, ${extensionCount()} ext` : ""}
             </span>
           </Popover.Trigger>
           <Popover.Portal>
@@ -158,6 +161,25 @@ export function SessionConfigBar(props: SessionConfigBarProps) {
                       {(tool) => (
                         <span class="rounded bg-gray-800 px-2 py-1 text-xs text-gray-300" title={tool.description}>
                           {tool.name}
+                        </span>
+                      )}
+                    </For>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Extensions section */}
+              <Show when={extensionCount() > 0}>
+                <div class="border-t border-gray-800 px-3 py-2">
+                  <div class="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1.5">
+                    <Puzzle class="size-3" />
+                    Extensions ({extensionCount()})
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <For each={props.capabilities!.extensions}>
+                      {(ext) => (
+                        <span class="rounded bg-gray-800 px-2 py-1 text-xs text-gray-300" title={ext.path}>
+                          {ext.name}
                         </span>
                       )}
                     </For>

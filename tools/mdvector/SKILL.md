@@ -7,6 +7,9 @@ description: |
   - Searching for notes, meetings transcripts, or other type of knowledge questions.
 
 version: 1.0.0
+requires:
+  - command: mdvector
+    install: "uv tool install mdvector"
 ---
 
 # note-search

@@ -15,9 +15,15 @@ export type ToolInfoItem = {
   description: string
 }
 
+export type ExtensionInfo = {
+  name: string
+  path: string
+}
+
 export type Capabilities = {
   skills: Array<SkillInfo>
   tools: Array<ToolInfoItem>
+  extensions: Array<ExtensionInfo>
 }
 
 export type ModelInfo = {

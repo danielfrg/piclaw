@@ -35,6 +35,7 @@ import {
 } from "@/session/store"
 import { convertAgentMessages } from "@/session/convert"
 import { flushSession } from "@/session/persist"
+import { extensionName } from "@/session/runtime"
 import { log } from "@/util/log"
 import { Id } from "@/util/id"
 
@@ -723,6 +724,7 @@ export function SessionRoutes() {
 
         const runtime = await requireRuntime(session)
         const { skills } = runtime.resourceLoader.getSkills()
+        const { extensions } = runtime.resourceLoader.getExtensions()
         const allTools = runtime.getAllTools()
 
         const capabilities: Capabilities = {
@@ -734,6 +736,10 @@ export function SessionRoutes() {
           tools: allTools.map((t) => ({
             name: t.name,
             description: t.description,
+          })),
+          extensions: extensions.map((e) => ({
+            name: extensionName(e.path),
+            path: e.path,
           })),
         }
 
